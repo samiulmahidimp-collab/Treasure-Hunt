@@ -1,19 +1,19 @@
 import React from "react";
-import { AlertTriangle, CheckCircle, ShieldAlert } from "lucide-react";
+import { CheckCircle, ShieldAlert } from "lucide-react";
 import { CLUES } from "../clues";
 
 export default function Leaderboard({ teams }) {
   const teamNames = ["mahid", "oyshee", "prizon"];
 
   return (
-    <div style={styles.container}>
-      <table style={styles.table}>
+    <div style={{ width: "100%", overflowX: "auto" }}>
+      <table className="heist-table">
         <thead>
-          <tr style={styles.headerRow}>
-            <th style={styles.th}>TEAM CODE</th>
-            <th style={styles.th}>CLUES SOLVED</th>
-            <th style={styles.th}>ATTEMPTS LEFT</th>
-            <th style={styles.th}>STATUS</th>
+          <tr>
+            <th>TEAM CODE</th>
+            <th>CLUES SOLVED</th>
+            <th>ATTEMPTS LEFT</th>
+            <th>STATUS</th>
           </tr>
         </thead>
         <tbody>
@@ -21,35 +21,44 @@ export default function Leaderboard({ teams }) {
             const data = teams[name] || { score: 0, attempts: 0, locked: false, solvedClues: [] };
             const solvedCount = data.solvedClues ? data.solvedClues.length : data.score;
             const remainingAttempts = 3 - (data.attempts || 0);
+            const isDanger = remainingAttempts === 1 && !data.locked;
 
             return (
-              <tr key={name} style={styles.row}>
-                <td style={styles.teamName}>{name.toUpperCase()}</td>
-                <td style={styles.scoreCell}>
-                  <div style={styles.scoreBadge}>
-                    <CheckCircle size={14} color="#22c55e" />
+              <tr key={name}>
+                <td style={{ fontWeight: 600, letterSpacing: 1.5, fontFamily: "var(--font-stencil)", fontSize: 18 }}>
+                  {name.toUpperCase()}
+                </td>
+                <td>
+                  <div className="score-badge">
+                    <CheckCircle size={13} color="var(--green-ok)" />
                     <span>{solvedCount} / {CLUES.length}</span>
                   </div>
                 </td>
-                <td style={styles.attemptsCell}>
+                <td>
                   {data.locked ? (
-                    <span style={styles.attemptsLocked}>0</span>
+                    <span style={{ color: "var(--text-muted)", textDecoration: "line-through" }}>0</span>
                   ) : (
-                    <span style={remainingAttempts === 1 ? styles.attemptsDanger : styles.attemptsNormal}>
+                    <span style={{
+                      color: isDanger ? "var(--red-primary)" : "var(--text-secondary)",
+                      fontWeight: isDanger ? 700 : 400,
+                      fontFamily: "var(--font-mono)",
+                      animation: isDanger ? "blink 1s infinite" : "none",
+                    }}>
                       {remainingAttempts}
                     </span>
                   )}
                 </td>
-                <td style={styles.statusCell}>
+                <td>
                   {data.locked ? (
-                    <span style={styles.statusLocked}>
-                      <ShieldAlert size={12} />
-                      <span>LOCKED</span>
+                    <span className="status-pill status-paused" style={{ gap: 5 }}>
+                      <ShieldAlert size={11} /> LOCKED
                     </span>
                   ) : solvedCount >= CLUES.length ? (
-                    <span style={styles.statusFinished}>PHASE 1 COMPLETE</span>
+                    <span className="status-pill status-running">PHASE 1 COMPLETE</span>
                   ) : (
-                    <span style={styles.statusActive}>DECRYPTING</span>
+                    <span className="status-pill" style={{ color: "#60a5fa", borderColor: "rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.06)" }}>
+                      DECRYPTING
+                    </span>
                   )}
                 </td>
               </tr>
@@ -60,94 +69,3 @@ export default function Leaderboard({ teams }) {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    width: "100%",
-    overflowX: "auto",
-  },
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
-    fontFamily: "var(--font-mono)",
-    fontSize: "13px",
-    color: "#fff",
-    textAlign: "left",
-  },
-  headerRow: {
-    borderBottom: "2px solid var(--red-primary)",
-  },
-  th: {
-    padding: "12px 16px",
-    fontWeight: "bold",
-    letterSpacing: "1px",
-    color: "#e50914",
-    fontSize: "11px",
-  },
-  row: {
-    borderBottom: "1px solid var(--border-color)",
-    transition: "background 0.2s ease",
-    ":hover": {
-      background: "rgba(229, 9, 20, 0.05)",
-    }
-  },
-  teamName: {
-    padding: "16px",
-    fontWeight: "bold",
-    letterSpacing: "1px",
-  },
-  scoreCell: {
-    padding: "16px",
-  },
-  scoreBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    background: "rgba(34, 197, 94, 0.1)",
-    border: "1px solid rgba(34, 197, 94, 0.3)",
-    padding: "4px 8px",
-    borderRadius: "2px",
-    fontWeight: "bold",
-  },
-  attemptsCell: {
-    padding: "16px",
-  },
-  attemptsNormal: {
-    color: "var(--text-secondary)",
-  },
-  attemptsDanger: {
-    color: "#e50914",
-    fontWeight: "bold",
-    animation: "blink 1s infinite",
-  },
-  attemptsLocked: {
-    color: "#777",
-    textDecoration: "line-through",
-  },
-  statusCell: {
-    padding: "16px",
-  },
-  statusActive: {
-    color: "#3b82f6",
-    fontSize: "11px",
-    letterSpacing: "1.5px",
-    fontWeight: "bold",
-  },
-  statusLocked: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "4px",
-    color: "#e50914",
-    fontSize: "11px",
-    letterSpacing: "1.5px",
-    fontWeight: "bold",
-    textShadow: "0 0 10px rgba(229, 9, 20, 0.4)",
-  },
-  statusFinished: {
-    color: "#22c55e",
-    fontSize: "11px",
-    letterSpacing: "1.5px",
-    fontWeight: "bold",
-    textShadow: "0 0 10px rgba(34, 197, 94, 0.4)",
-  }
-};

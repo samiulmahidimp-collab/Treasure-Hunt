@@ -1,43 +1,30 @@
+/**
+ * App.jsx — Root router for LA CAZA DE TESORO
+ *
+ * Three possible states (no router library needed):
+ *   null    → LandingPage (the ONE login screen)
+ *   "player" → PlayerPortal (team select + game)
+ *   "admin"  → AdminPortal (professor's command room)
+ *
+ * The HeistLayout (mask background) is applied inside each screen component,
+ * so the background image is always visible regardless of state.
+ *
+ * Auth fix: onSelectRole fires → role state updates → React immediately
+ * renders the target portal. No race condition, no bounce-back to login.
+ */
 import React, { useState } from "react";
 import LandingPage from "./components/LandingPage";
 import AdminPortal from "./components/AdminPortal";
 import PlayerPortal from "./components/PlayerPortal";
 
 export default function App() {
-  const [role, setRole] = useState(null); // 'admin' | 'player' | null
-
-  const handleSelectRole = (selectedRole) => {
-    setRole(selectedRole);
-  };
-
-  const handleBackToLobby = () => {
-    setRole(null);
-  };
+  const [role, setRole] = useState(null); // null | "player" | "admin"
 
   return (
-    <div style={styles.app}>
-      {role === null && (
-        <LandingPage onSelectRole={handleSelectRole} />
-      )}
-      
-      {role === "admin" && (
-        <AdminPortal onBack={handleBackToLobby} />
-      )}
-      
-      {role === "player" && (
-        <PlayerPortal onBack={handleBackToLobby} />
-      )}
-    </div>
+    <>
+      {role === null   && <LandingPage onSelectRole={setRole} />}
+      {role === "player" && <PlayerPortal onBack={() => setRole(null)} />}
+      {role === "admin"  && <AdminPortal  onBack={() => setRole(null)} />}
+    </>
   );
 }
-
-const styles = {
-  app: {
-    minHeight: "100vh",
-    width: "100%",
-    background: "#080808",
-    color: "#ffffff",
-    display: "flex",
-    flexDirection: "column",
-  }
-};
