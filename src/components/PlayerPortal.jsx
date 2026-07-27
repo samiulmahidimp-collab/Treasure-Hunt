@@ -72,31 +72,17 @@ export default function PlayerPortal({ onBack }) {
     try {
       const newToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-      // 1. Fetch current team data snapshot first
-      const allTeamsData = await dbService.getAllTeams();
-      const existingTeam = allTeamsData[teamObj.id] || {};
-
-      // Guarantee clue ID is preserved, defaulting to clue_1
-      const preservedClueId = existingTeam.currentClueId || "clue_1";
-
-      // 2. Set LocalStorage & state BEFORE DB update so our own device token matches
+      // 1. Set LocalStorage & session state BEFORE updating DB
       localStorage.setItem("heist_team", teamObj.id);
       localStorage.setItem("heist_session_token", newToken);
       setSessionToken(newToken);
 
-      // 3. Update DB with new sessionToken & preserved clue ID
+      // 2. Update ONLY sessionToken in DB so currentClueId, score, & solvedClues are 100% preserved
       await dbService.updateTeam(teamObj.id, {
-        name: teamObj.name,
-        sessionToken: newToken,
-        score: existingTeam.score || 0,
-        solvedClues: existingTeam.solvedClues || [],
-        currentClueId: preservedClueId,
-        attempts: existingTeam.attempts || 0,
-        locked: existingTeam.locked || false,
-        needsHelp: existingTeam.needsHelp || false,
+        sessionToken: newToken
       });
 
-      // 4. Activate team state to display portal
+      // 3. Activate team state to display portal
       setActiveTeam(teamObj.id);
     } catch (err) {
       console.error("Login update error:", err);
