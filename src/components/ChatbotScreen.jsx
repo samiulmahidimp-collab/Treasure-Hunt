@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
-import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play, Clock } from "lucide-react";
+import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play, Clock, Trophy, Award } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import QRScannerModal from "./QRScannerModal";
@@ -151,6 +151,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
 
   const [inputVal, setInputVal] = useState("");
   const [showSuccessIndicator, setShowSuccessIndicator] = useState(false);
+  const [showStage1CongratsModal, setShowStage1CongratsModal] = useState(false);
   const [zoomImage, setZoomImage] = useState(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [isClueCollapsed, setIsClueCollapsed] = useState(false);
@@ -167,7 +168,6 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
       setTimeout(() => setAlertNotice(""), 5000);
 
       setMessages(prev => {
-        // Enable start button on existing welcome message if present
         const hasStartMsg = prev.some(m => m.showStartButton);
         if (!hasStartMsg) {
           const startMsg = {
@@ -377,8 +377,11 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
       const newSolvedCount = newSolvedClues.length;
 
       let successMsg = `CORRECT CODE CRACKED! Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`;
+      
       if (newSolvedCount === 8) {
-        successMsg = `STAGE 1 COMPLETE! All 8 initial clues decrypted. Advancing to Stage 2 (Semi-Final)...`;
+        // Trigger Stage 1 victory celebration modal
+        setShowStage1CongratsModal(true);
+        successMsg = `🎉 CONGRATULATIONS OPERATIVES! STAGE 1 IS OFFICIALLY CLEARED! You have decrypted all 8 core vaults of Stage 1 with outstanding precision. The Professor commends Team ${teamName.toUpperCase()}. Advancing to Stage 2 (Semi-Final)...`;
       } else if (newSolvedCount === 10) {
         successMsg = `STAGE 2 COMPLETE! Advancing to Final Stage (Grand Vault)...`;
       }
@@ -465,6 +468,45 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
             <div style={{ textAlign: "center", color: "#fff" }}>
               <Check size={64} color="#fff" />
               <h2 className="heist-title" style={{ marginTop: 16, letterSpacing: 4 }}>ACCESS GRANTED</h2>
+            </div>
+          </div>
+        )}
+
+        {/* Stage 1 Completion Celebration Modal */}
+        {showStage1CongratsModal && (
+          <div className="zoom-modal" onClick={() => setShowStage1CongratsModal(false)}>
+            <div
+              className="heist-card"
+              style={{
+                maxWidth: 440,
+                width: "92%",
+                textAlign: "center",
+                border: "2px solid #22c55e",
+                boxShadow: "0 0 35px rgba(34, 197, 94, 0.4)",
+                padding: "32px 24px"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+                <Trophy size={54} color="#22c55e" style={{ filter: "drop-shadow(0 0 12px rgba(34,197,94,0.6))" }} />
+              </div>
+              <h2 className="heist-title" style={{ color: "#22c55e", fontSize: 24, letterSpacing: 2, marginBottom: 8 }}>
+                🎉 STAGE 1 CLEARED! 🎉
+              </h2>
+              <p className="heist-subtitle" style={{ fontSize: 13, color: "var(--text-secondary)", margin: "14px 0 20px", lineHeight: 1.6 }}>
+                OUTSTANDING WORK OPERATIVE! TEAM <strong style={{ color: "#fff" }}>{teamName.toUpperCase()}</strong> HAS DECRYPTED ALL 8 CORE VAULTS OF STAGE 1!
+              </p>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(34, 197, 94, 0.15)", border: "1px solid #22c55e", borderRadius: 4, color: "#22c55e", fontSize: 12, fontWeight: 700, padding: "8px 16px", marginBottom: 24 }}>
+                <Award size={16} color="#22c55e" />
+                <span>ADVANCING TO STAGE 2 (SEMI-FINALS)</span>
+              </div>
+              <button
+                className="heist-btn-solid"
+                style={{ background: "#22c55e", borderColor: "#22c55e", color: "#000", fontWeight: 800, width: "100%", padding: "12px", fontSize: 13 }}
+                onClick={() => setShowStage1CongratsModal(false)}
+              >
+                PROCEED TO STAGE 2 CLUES
+              </button>
             </div>
           </div>
         )}
