@@ -12,14 +12,16 @@ import { TEAMS_CONFIG } from "./teamsConfig";
 export const generateDefaultTeams = () => {
   const teams = {};
   const now = Date.now();
-  TEAMS_CONFIG.forEach(t => {
+  const stage1Ids = ["clue_1", "clue_2", "clue_3", "clue_4", "clue_5", "clue_6", "clue_7", "clue_8"];
+
+  TEAMS_CONFIG.forEach((t, idx) => {
     teams[t.id] = {
       id: t.id,
       name: t.name,
       password: t.password,
       score: 0,
       solvedClues: [],
-      currentClueId: "clue_1",
+      currentClueId: stage1Ids[idx % stage1Ids.length],
       chatMessages: [],
       sessionToken: "",
       attempts: 0,

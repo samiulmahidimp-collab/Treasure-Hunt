@@ -168,32 +168,6 @@ export default function PlayerPortal({ onBack }) {
     );
   }
 
-  // ── Game not started ────────────────────────────────────
-  if (!gameSettings.isStarted && !bypassedWaiting) {
-    return (
-      <HeistLayout>
-        <div className="heist-waiting">
-          <div className="heist-card heist-waiting-card">
-            <AlertTriangle size={48} color="#C8102E" className="pulse-glow" />
-            <h2 className="heist-waiting-title">CHANNEL ENCRYPTED</h2>
-            <p className="heist-waiting-text">
-              THE PROFESSOR HAS NOT STARTED THE PROTOCOL YET. STAND BY FOR THE SIGNAL...
-            </p>
-            <p className="heist-badge">OPERATIVE: {activeTeamDisplayName}</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", marginTop: 12 }}>
-              <button className="heist-btn-solid" onClick={() => setBypassedWaiting(true)} style={{ width: "100%" }}>
-                ENTER MISSION CHANNEL
-              </button>
-              <button className="heist-btn" onClick={handleLogout} style={{ width: "100%" }}>
-                <LogOut size={14} /> DISCONNECT
-              </button>
-            </div>
-          </div>
-        </div>
-      </HeistLayout>
-    );
-  }
-
   // ── Game paused (Global or Individual) ───────────────────
   if (gameSettings.isPaused || teamData?.isPaused) {
     return (
@@ -220,12 +194,13 @@ export default function PlayerPortal({ onBack }) {
     );
   }
 
-  // ── Active game ─────────────────────────────────────────
+  // ── Active game or waiting for Admin signal ───────────────
   return (
     <ChatbotScreen
       teamName={activeTeamDisplayName}
       teamId={activeTeam}
       teamData={teamData}
+      isGameStarted={gameSettings.isStarted}
       onLogout={handleLogout}
     />
   );

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
-import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play } from "lucide-react";
+import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play, Clock } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import QRScannerModal from "./QRScannerModal";
 
-export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) {
+export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarted = false, onLogout }) {
   const effectiveTeamId = teamId || teamData?.id || teamName;
   const storageKey = `heist_chat_${effectiveTeamId}`;
 
@@ -118,18 +118,23 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   if (!activeClue && !isAllComplete) {
     const solvedSet = new Set(safeTeamData.solvedClues || []);
     const stage1Unsolved = CLUES.filter(c => (c.stage || 1) === 1 && !solvedSet.has(c.id));
-    const anyUnsolved = CLUES.filter(c => !solvedSet.has(c.id));
-    const candidatePool = stage1Unsolved.length > 0 ? stage1Unsolved : anyUnsolved;
-    if (candidatePool.length > 0) {
-      activeClue = candidatePool[0];
+    
+    // Deterministic hash based on team ID so DIFFERENT teams get DIFFERENT starting clues!
+    let hash = 0;
+    for (let i = 0; i < (effectiveTeamId || "").length; i++) {
+      hash += effectiveTeamId.charCodeAt(i);
     }
+    const teamClueIndex = stage1Unsolved.length > 0 ? Math.abs(hash) % stage1Unsolved.length : 0;
+    activeClue = stage1Unsolved[teamClueIndex] || CLUES[0];
   }
 
   const initialWelcomeMsg = [{
     sender: "professor",
-    text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Are you ready to initiate the heist mission?`,
+    text: isGameStarted
+      ? `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Are you ready to initiate the heist mission?`
+      : `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Stand by... The Admin has not started the game yet.`,
     type: "welcome",
-    showStartButton: true
+    showStartButton: isGameStarted
   }];
 
   // Instant message state initialization
@@ -153,6 +158,33 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const messagesEndRef = useRef(null);
 
   const lastResetTokenRef = useRef(teamData?.resetToken);
+  const prevGameStartedRef = useRef(isGameStarted);
+
+  // Notify when Admin starts the game
+  useEffect(() => {
+    if (!prevGameStartedRef.current && isGameStarted) {
+      setAlertNotice("🚀 GAME STARTED BY ADMIN! Tapping mission button to begin.");
+      setTimeout(() => setAlertNotice(""), 5000);
+
+      setMessages(prev => {
+        // Enable start button on existing welcome message if present
+        const hasStartMsg = prev.some(m => m.showStartButton);
+        if (!hasStartMsg) {
+          const startMsg = {
+            sender: "professor",
+            text: `🚨 ATTENTION OPERATIVES: The Admin has officially initiated the game! Press below to begin your mission.`,
+            type: "welcome",
+            showStartButton: true
+          };
+          const updated = [...prev, startMsg];
+          localStorage.setItem(storageKey, JSON.stringify(updated));
+          return updated;
+        }
+        return prev;
+      });
+    }
+    prevGameStartedRef.current = isGameStarted;
+  }, [isGameStarted, storageKey]);
 
   // Listen for global game reset event
   useEffect(() => {
@@ -222,10 +254,16 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
 
     const autoAssign = async () => {
       const solvedSet = new Set(safeTeamData.solvedClues || []);
-      const unsolvedStage1 = CLUES.filter(c => (c.stage || 1) === 1 && !solvedSet.has(c.id));
+      const stage1Unsolved = CLUES.filter(c => (c.stage || 1) === 1 && !solvedSet.has(c.id));
       const anyUnsolved = CLUES.filter(c => !solvedSet.has(c.id));
-      const pool = unsolvedStage1.length > 0 ? unsolvedStage1 : anyUnsolved;
-      const defaultTarget = pool.length > 0 ? pool[0] : CLUES[0];
+      const pool = stage1Unsolved.length > 0 ? stage1Unsolved : anyUnsolved;
+      
+      let hash = 0;
+      for (let i = 0; i < (effectiveTeamId || "").length; i++) {
+        hash += effectiveTeamId.charCodeAt(i);
+      }
+      const teamClueIndex = pool.length > 0 ? Math.abs(hash) % pool.length : 0;
+      const defaultTarget = pool[teamClueIndex] || pool[0] || CLUES[0];
 
       if (defaultTarget) {
         await dbService.updateTeam(effectiveTeamId, { currentClueId: defaultTarget.id, attempts: 0, locked: false });
@@ -269,16 +307,13 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     const raw = scannedText.trim();
     let finalCode = raw;
 
-    // Check if scanned QR content is a Web URL
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
-      // 1. Open destination URL in a new browser tab so player can inspect the page
       try {
         window.open(raw, "_blank", "noopener,noreferrer");
       } catch (e) {
         console.error("Popup blocked:", e);
       }
 
-      // 2. Check if URL has an explicit code parameter (e.g. ?code=123 or ?answer=ABC)
       try {
         const parsedUrl = new URL(raw);
         const params = new URLSearchParams(parsedUrl.search);
@@ -305,7 +340,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputVal.trim() || isLocked || isAllComplete) return;
+    if (!inputVal.trim() || isLocked || isAllComplete || !isGameStarted) return;
 
     const userText = inputVal.trim();
     setInputVal("");
@@ -314,7 +349,6 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     let currentMsgList = [...messages, newPlayerMsg];
     updateMessagesAndSync(currentMsgList);
 
-    // Ensure target clue exists
     let clueToCheck = activeClue;
     if (!clueToCheck) {
       clueToCheck = await getNextClue(safeTeamData.solvedClues || []);
@@ -333,7 +367,6 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
       return;
     }
 
-    // Evaluate answer correctness
     const isCorrect = userText.toLowerCase() === clueToCheck.answer.toLowerCase();
 
     if (isCorrect) {
@@ -389,7 +422,6 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
         }
       }
     } else {
-      // Incorrect answer
       const nextAttempts = currentAttempts + 1;
       const remaining = Math.max(0, 3 - nextAttempts);
 
@@ -476,6 +508,27 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
             </button>
           </div>
         </header>
+
+        {/* Admin Game Start Waiting Bar */}
+        {!isGameStarted && (
+          <div style={{
+            background: "rgba(217, 119, 6, 0.95)",
+            color: "#fff",
+            textAlign: "center",
+            padding: "8px 16px",
+            fontSize: 12,
+            fontFamily: "var(--font-mono)",
+            letterSpacing: 1,
+            zIndex: 95,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8
+          }}>
+            <Clock size={14} color="#fff" />
+            <span>⏳ WAITING FOR THE PROFESSOR / ADMIN TO START THE GAME...</span>
+          </div>
+        )}
 
         {/* Alert Notification Bar */}
         {alertNotice && (
@@ -599,7 +652,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                         </span>
                         <p className="chat-text">{msg.text}</p>
                         
-                        {msg.showStartButton && (
+                        {msg.showStartButton && isGameStarted && (
                           <div style={{ marginTop: 12 }}>
                             <button
                               type="button"
@@ -653,8 +706,14 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                   className="chat-input-field"
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
-                  placeholder={activeClue ? "TYPE DECRYPTION KEY OR SCAN QR..." : "RESPOND TO THE PROFESSOR..."}
-                  disabled={isLocked || isAllComplete}
+                  placeholder={
+                    !isGameStarted
+                      ? "WAITING FOR ADMIN TO START GAME..."
+                      : activeClue
+                      ? "TYPE DECRYPTION KEY OR SCAN QR..."
+                      : "RESPOND TO THE PROFESSOR..."
+                  }
+                  disabled={!isGameStarted || isLocked || isAllComplete}
                   autoComplete="off"
                 />
 
@@ -665,7 +724,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                   style={{ padding: "8px 12px", borderColor: "var(--border-red)" }}
                   onClick={() => setShowQRScanner(true)}
                   title="Scan QR Code using Camera"
-                  disabled={isLocked || isAllComplete}
+                  disabled={!isGameStarted || isLocked || isAllComplete}
                 >
                   <Camera size={16} color="#C8102E" />
                 </button>
@@ -674,7 +733,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                   type="submit"
                   className="heist-btn-solid"
                   style={{ padding: "8px 16px" }}
-                  disabled={isLocked || isAllComplete || !inputVal.trim()}
+                  disabled={!isGameStarted || isLocked || isAllComplete || !inputVal.trim()}
                 >
                   <Send size={15} />
                 </button>
