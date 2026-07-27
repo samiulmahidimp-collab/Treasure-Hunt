@@ -1,10 +1,9 @@
 import React from "react";
 import { CheckCircle, ShieldAlert, Pause, Play, Unlock } from "lucide-react";
 import { TOTAL_CLUES_COUNT } from "../clues";
+import { TEAMS_CONFIG } from "../teamsConfig";
 
 export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) {
-  const teamNames = ["mahid", "oyshee", "prizon"];
-
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
       <table className="heist-table">
@@ -19,9 +18,10 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
           </tr>
         </thead>
         <tbody>
-          {teamNames.map((name) => {
-            const data = teams[name] || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [] };
-            const solvedCount = data.solvedClues ? data.solvedClues.length : data.score;
+          {TEAMS_CONFIG.map((t) => {
+            const teamKey = t.id;
+            const data = (teams && teams[teamKey]) || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [] };
+            const solvedCount = data.solvedClues ? data.solvedClues.length : (data.score || 0);
             const remainingAttempts = 3 - (data.attempts || 0);
             const isDanger = remainingAttempts === 1 && !data.locked;
 
@@ -45,9 +45,9 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
             }
 
             return (
-              <tr key={name}>
-                <td style={{ fontWeight: 700, letterSpacing: 1.5, fontFamily: "var(--font-stencil)", fontSize: 16 }}>
-                  {name.toUpperCase()}
+              <tr key={t.id}>
+                <td style={{ fontWeight: 700, letterSpacing: 1, fontFamily: "var(--font-stencil)", fontSize: 15 }}>
+                  {t.name}
                 </td>
 
                 {/* CURRENT STAGE & CLUE */}
@@ -128,7 +128,7 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
                           alignItems: "center",
                           gap: 4
                         }}
-                        onClick={() => onTogglePauseTeam(name, !data.isPaused)}
+                        onClick={() => onTogglePauseTeam(t.id, !data.isPaused)}
                       >
                         {data.isPaused ? <Play size={12} /> : <Pause size={12} />}
                         <span>{data.isPaused ? "RESUME" : "PAUSE"}</span>
@@ -147,7 +147,7 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
                             alignItems: "center",
                             gap: 4
                           }}
-                          onClick={() => onUnlockTeam(name)}
+                          onClick={() => onUnlockTeam(t.id)}
                         >
                           <Unlock size={12} />
                           <span>UNLOCK</span>

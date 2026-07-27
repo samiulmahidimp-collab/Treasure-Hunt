@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { dbService } from "../firebase";
-import { AlertTriangle, Pause, LogOut, Users } from "lucide-react";
+import { AlertTriangle, Pause, LogOut, Users, Lock } from "lucide-react";
 import ChatbotScreen from "./ChatbotScreen";
 import HeistLayout from "./HeistLayout";
 import { DeTag } from "./HeistUI";
+import { TEAMS_CONFIG, getTeamById } from "../teamsConfig";
 
 export default function PlayerPortal({ onBack }) {
   const [selectedTeam, setSelectedTeam] = useState("");
+  const [passwordVal, setPasswordVal] = useState("");
   const [activeTeam, setActiveTeam] = useState("");
   const [sessionToken, setSessionToken] = useState("");
   const [gameSettings, setGameSettings] = useState({ isStarted: false, isPaused: false });
@@ -14,7 +16,7 @@ export default function PlayerPortal({ onBack }) {
   const [loginError, setLoginError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validTeams = ["mahid", "oyshee", "prizon"];
+  const validTeamIds = TEAMS_CONFIG.map(t => t.id);
 
   useEffect(() => {
     const unsub = dbService.subscribeGameSettings((s) => setGameSettings(s));
@@ -25,7 +27,7 @@ export default function PlayerPortal({ onBack }) {
   useEffect(() => {
     const storedTeam  = localStorage.getItem("heist_team");
     const storedToken = localStorage.getItem("heist_session_token");
-    if (storedTeam && storedToken && validTeams.includes(storedTeam)) {
+    if (storedTeam && storedToken && validTeamIds.includes(storedTeam)) {
       setActiveTeam(storedTeam);
       setSessionToken(storedToken);
     }
@@ -48,17 +50,26 @@ export default function PlayerPortal({ onBack }) {
 
   const handleTeamSelect = async (e) => {
     e.preventDefault();
-    const teamLower = selectedTeam.trim().toLowerCase();
-    if (!validTeams.includes(teamLower)) {
+    setLoginError("");
+
+    const teamObj = getTeamById(selectedTeam);
+    if (!teamObj) {
       setLoginError("INVALID TEAM SIGNATURE. ACCESS REJECTED.");
       return;
     }
-    setLoginError("");
+
+    // Password validation (case-insensitive trim check)
+    if (passwordVal.trim().toLowerCase() !== teamObj.password.toLowerCase()) {
+      setLoginError("INVALID TEAM PASSWORD. ACCESS DENIED.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-    await dbService.updateTeam(teamLower, {
+    await dbService.updateTeam(teamObj.id, {
+      name: teamObj.name,
       sessionToken: token,
       score: teamData?.score || 0,
       solvedClues: teamData?.solvedClues || [],
@@ -67,11 +78,11 @@ export default function PlayerPortal({ onBack }) {
     });
 
     // Write to localStorage BEFORE updating state to avoid false kick-outs
-    localStorage.setItem("heist_team", teamLower);
+    localStorage.setItem("heist_team", teamObj.id);
     localStorage.setItem("heist_session_token", token);
 
     setSessionToken(token);
-    setActiveTeam(teamLower);
+    setActiveTeam(teamObj.id);
     setIsSubmitting(false);
   };
 
@@ -80,26 +91,30 @@ export default function PlayerPortal({ onBack }) {
     localStorage.removeItem("heist_session_token");
     setActiveTeam("");
     setSessionToken("");
+    setPasswordVal("");
     setTeamData(null);
   };
+
+  const activeTeamObj = getTeamById(activeTeam);
+  const activeTeamDisplayName = activeTeamObj ? activeTeamObj.name : activeTeam.toUpperCase();
 
   // ── Team selection form ──────────────────────────────────
   if (!activeTeam) {
     return (
       <HeistLayout>
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", padding: "24px" }}>
-          <div className="heist-card" style={{ maxWidth: 400, width: "100%", textAlign: "center" }}>
+          <div className="heist-card" style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginBottom: 28 }}>
-              <Users size={32} color="#C8102E" />
+              <Users size={34} color="#C8102E" />
               <h2 className="heist-section-title">SQUAD <DeTag /> IDENTITY</h2>
               <p className="heist-subtitle" style={{ marginTop: 4 }}>
-                SYNC YOUR TEAM SIGNATURE TO ENTER THE CHANNEL
+                SELECT YOUR TEAM AND ENTER ACCESS PASSWORD
               </p>
             </div>
 
             <form onSubmit={handleTeamSelect} style={{ display: "flex", flexDirection: "column", gap: 16, textAlign: "left" }}>
               <div className="login-field">
-                <label className="heist-label" htmlFor="team-select">SELECT TEAM CODE</label>
+                <label className="heist-label" htmlFor="team-select">SELECT TEAM NAME</label>
                 <select
                   id="team-select"
                   className="heist-input"
@@ -107,18 +122,33 @@ export default function PlayerPortal({ onBack }) {
                   onChange={(e) => setSelectedTeam(e.target.value)}
                   required
                 >
-                  <option value="" disabled>-- CHOOSE TEAM --</option>
-                  {validTeams.map((t) => (
-                    <option key={t} value={t}>{t.toUpperCase()}</option>
+                  <option value="" disabled>-- CHOOSE YOUR TEAM --</option>
+                  {TEAMS_CONFIG.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
+              </div>
+
+              <div className="login-field">
+                <label className="heist-label" htmlFor="team-password">TEAM PASSWORD</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    id="team-password"
+                    type="password"
+                    className="heist-input"
+                    value={passwordVal}
+                    onChange={(e) => setPasswordVal(e.target.value)}
+                    placeholder="ENTER PASSWORD..."
+                    required
+                  />
+                </div>
               </div>
 
               {loginError && <div className="heist-error">{loginError}</div>}
 
               <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
                 <button type="submit" className="heist-btn-solid" style={{ width: "100%" }} disabled={isSubmitting}>
-                  {isSubmitting ? "CONNECTING..." : "ACTIVATE CHANNEL"}
+                  {isSubmitting ? "AUTHENTICATING..." : "ACTIVATE CHANNEL"}
                 </button>
                 <button type="button" className="heist-btn" style={{ width: "100%" }} onClick={onBack}>
                   BACK TO LOBBY
@@ -142,7 +172,7 @@ export default function PlayerPortal({ onBack }) {
             <p className="heist-waiting-text">
               THE PROFESSOR HAS NOT STARTED THE PROTOCOL YET. STAND BY FOR THE SIGNAL...
             </p>
-            <p className="heist-badge">OPERATIVE: {activeTeam.toUpperCase()}</p>
+            <p className="heist-badge">OPERATIVE: {activeTeamDisplayName}</p>
             <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>
               <LogOut size={14} /> DISCONNECT
             </button>
@@ -168,7 +198,7 @@ export default function PlayerPortal({ onBack }) {
                 : "THE PROFESSOR HAS PAUSED THE GAME CHANNELS. MAINTAIN POSITIONS AND STAND BY."
               }
             </p>
-            <p className="heist-badge">OPERATIVE: {activeTeam.toUpperCase()}</p>
+            <p className="heist-badge">OPERATIVE: {activeTeamDisplayName}</p>
             <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>
               <LogOut size={14} /> DISCONNECT
             </button>
@@ -181,7 +211,8 @@ export default function PlayerPortal({ onBack }) {
   // ── Active game ─────────────────────────────────────────
   return (
     <ChatbotScreen
-      teamName={activeTeam}
+      teamName={activeTeamDisplayName}
+      teamId={activeTeam}
       teamData={teamData}
       onLogout={handleLogout}
     />
