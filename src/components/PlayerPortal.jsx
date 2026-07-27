@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { dbService } from "../firebase";
-import { AlertTriangle, Pause, LogOut, Users, Play } from "lucide-react";
+import { AlertTriangle, Pause, LogOut, Users } from "lucide-react";
 import ChatbotScreen from "./ChatbotScreen";
 import HeistLayout from "./HeistLayout";
 import { DeTag } from "./HeistUI";
@@ -140,21 +140,10 @@ export default function PlayerPortal({ onBack }) {
             <AlertTriangle size={48} color="#C8102E" className="pulse-glow" />
             <h2 className="heist-waiting-title">CHANNEL ENCRYPTED</h2>
             <p className="heist-waiting-text">
-              THE PROFESSOR HAS NOT DEPLOYED THE SIGNAL YET. YOU CAN STAND BY OR LAUNCH DIRECTLY.
+              THE PROFESSOR HAS NOT STARTED THE PROTOCOL YET. STAND BY FOR THE SIGNAL...
             </p>
             <p className="heist-badge">OPERATIVE: {activeTeam.toUpperCase()}</p>
-
-            <button
-              className="heist-btn-solid"
-              style={{ width: "100%", marginTop: 8 }}
-              onClick={async () => {
-                await dbService.updateGameSettings({ isStarted: true, isPaused: false });
-              }}
-            >
-              <Play size={16} /> ACTIVATE MISSION &amp; ENTER CHAT
-            </button>
-
-            <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 4 }}>
+            <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>
               <LogOut size={14} /> DISCONNECT
             </button>
           </div>
@@ -163,18 +152,16 @@ export default function PlayerPortal({ onBack }) {
     );
   }
 
-  // ── Game paused (Globally or Individually by Admin) ─────────────────
-  if (gameSettings.isPaused || teamData?.paused) {
+  // ── Game paused ─────────────────────────────────────────
+  if (gameSettings.isPaused) {
     return (
       <HeistLayout>
         <div className="heist-waiting">
           <div className="heist-card heist-waiting-card">
             <Pause size={48} color="#d97706" style={{ animation: "pulse 1.5s infinite alternate" }} />
-            <h2 className="heist-waiting-title" style={{ color: "#d97706" }}>GAME PAUSED BY ADMIN</h2>
+            <h2 className="heist-waiting-title" style={{ color: "#d97706" }}>MISSION ON HOLD</h2>
             <p className="heist-waiting-text">
-              {teamData?.paused && !gameSettings.isPaused
-                ? `Operative ${activeTeam.toUpperCase()}, your team channel has been individually paused by Admin. Maintain position.`
-                : "THE PROFESSOR HAS PAUSED THE GAME FOR ALL TEAMS. MAINTAIN POSITIONS AND STAND BY."}
+              THE PROFESSOR HAS PAUSED THE GAME CHANNELS. MAINTAIN POSITIONS AND STAND BY.
             </p>
             <p className="heist-badge">OPERATIVE: {activeTeam.toUpperCase()}</p>
             <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>

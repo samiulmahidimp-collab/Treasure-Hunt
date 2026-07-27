@@ -1,137 +1,76 @@
-// Configuration and initial schema for 3-Stage Treasure Hunt
-// Assets are served from:
-// - Stage 1 (Initial Hunt): /pictures/stage1/  (8 sequential clues)
-// - Stage 2 (The Qualifiers): /pictures/stage2/  (2 sequential clues)
-// - Stage 3 (The Final Round): /pictures/final/   (1 ultimate clue)
+// Configuration array mapping clue images to their correct answers
+// Answer = exact filename without extension (case-insensitive)
+// Images are located in /public/pictures/
 
-export const STAGE_CONFIG = {
-  1: { stage: 1, name: "Stage 1: The Initial Hunt", totalClues: 8, folder: "stage1" },
-  2: { stage: 2, name: "Stage 2: The Qualifiers", totalClues: 2, folder: "stage2" },
-  3: { stage: 3, name: "Stage 3: The Final Round", totalClues: 1, folder: "final" }
-};
+// Total clues to solve per round (Phase 1)
+export const CLUES_PER_ROUND = 11;
 
-export const DEFAULT_CLUES = [
-  // Stage 1 (8 sequential clues)
+// Full clue pool (all images in /public/pictures/)
+export const CLUES = [
   {
-    id: "clue_1",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/afrewa.png",
-    imageFilename: "afrewa.png",
+    id: "clue_afrewa",
+    image: "/pictures/afrewa.png",
     answer: "afrewa",
-    description: "CLUE #1: Analyze this image and enter the secret code."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_2",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/kiytth.png",
-    imageFilename: "kiytth.png",
+    id: "clue_kiytth",
+    image: "/pictures/kiytth.png",
     answer: "kiytth",
-    description: "CLUE #2: Analyze this image and enter the secret code."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_3",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/qplwet.png",
-    imageFilename: "qplwet.png",
+    id: "clue_qplwet",
+    image: "/pictures/qplwet.png",
     answer: "qplwet",
-    description: "CLUE #3: Analyze this image and enter the secret code."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_4",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/abklcd.jpg",
-    imageFilename: "abklcd.jpg",
+    id: "clue_abklcd",
+    image: "/pictures/abklcd.jpg",
     answer: "abklcd",
-    description: "CLUE #4: Analyze this image and enter the secret code."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_5",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/ahfiuw.jpg",
-    imageFilename: "ahfiuw.jpg",
+    id: "clue_ahfiuw",
+    image: "/pictures/ahfiuw.jpg",
     answer: "ahfiuw",
-    description: "CLUE #5: Analyze this image and enter the secret code."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_6",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/apndaq.jpg",
-    imageFilename: "apndaq.jpg",
+    id: "clue_apndaq",
+    image: "/pictures/apndaq.jpg",
     answer: "apndaq",
-    description: "CLUE #6: Analyze this image and enter the secret code."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_7",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/jk1106.png",
-    imageFilename: "jk1106.png",
+    id: "clue_jk1106",
+    image: "/pictures/jk1106.png",
     answer: "jk1106",
-    description: "CLUE #7: Analyze this image and enter the secret code."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_8",
-    stage: 1,
-    stageName: "Stage 1: The Initial Hunt",
-    stageFolder: "stage1",
-    image_path: "/pictures/stage1/kshpfl.png",
-    imageFilename: "kshpfl.png",
+    id: "clue_kshpfl",
+    image: "/pictures/kshpfl.png",
     answer: "kshpfl",
-    description: "CLUE #8: Final vault code for Stage 1."
+    description: "Decrypt the code from this visual file."
   },
-
-  // Stage 2 (2 sequential clues)
   {
-    id: "clue_9",
-    stage: 2,
-    stageName: "Stage 2: The Qualifiers",
-    stageFolder: "stage2",
-    image_path: "/pictures/stage2/opklru.jpg",
-    imageFilename: "opklru.jpg",
+    id: "clue_opklru",
+    image: "/pictures/opklru.jpg",
     answer: "opklru",
-    description: "STAGE 2 CLUE #1: Qualifier cipher."
+    description: "Decrypt the code from this visual file."
   },
   {
-    id: "clue_10",
-    stage: 2,
-    stageName: "Stage 2: The Qualifiers",
-    stageFolder: "stage2",
-    image_path: "/pictures/stage2/romhkf.jpg",
-    imageFilename: "romhkf.jpg",
+    id: "clue_romhkf",
+    image: "/pictures/romhkf.jpg",
     answer: "romhkf",
-    description: "STAGE 2 CLUE #2: Qualifier cipher."
+    description: "Decrypt the code from this visual file."
   },
-
-  // Stage 3 (1 final clue)
   {
-    id: "clue_11",
-    stage: 3,
-    stageName: "Stage 3: The Final Round",
-    stageFolder: "final",
-    image_path: "/pictures/final/yen7rc.jpg",
-    imageFilename: "yen7rc.jpg",
+    id: "clue_yen7rc",
+    image: "/pictures/yen7rc.jpg",
     answer: "yen7rc",
-    description: "FINAL ROUND: The Ultimate Heist Treasure Code."
+    description: "Decrypt the code from this visual file."
   }
 ];
-
-// Helper to compute image_path dynamically based on stage & filename
-export function getDynamicImagePath(stage, filename) {
-  const folderMap = { 1: "stage1", 2: "stage2", 3: "final" };
-  const folder = folderMap[stage] || "stage1";
-  const cleanFilename = (filename || "").replace(/^\/+/, "").replace(/^pictures\/(stage1|stage2|final)\//, "");
-  return `/pictures/${folder}/${cleanFilename}`;
-}
