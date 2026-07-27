@@ -151,6 +151,8 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const [alertNotice, setAlertNotice] = useState("");
   const messagesEndRef = useRef(null);
 
+  const lastResetTokenRef = useRef(teamData?.resetToken);
+
   // Listen for global game reset event
   useEffect(() => {
     const handleReset = () => {
@@ -163,15 +165,17 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  // Sync server chat messages if available or clear if game reset
+  // Sync server chat messages if available or wipe if game was reset
   useEffect(() => {
     if (teamData) {
+      const hasResetTokenChanged = teamData.resetToken && teamData.resetToken !== lastResetTokenRef.current;
       const isTeamReset =
         (!teamData.solvedClues || teamData.solvedClues.length === 0) &&
         (!teamData.chatMessages || teamData.chatMessages.length === 0) &&
-        (teamData.score === 0);
+        (!teamData.score || teamData.score === 0);
 
-      if (isTeamReset) {
+      if (hasResetTokenChanged || isTeamReset) {
+        lastResetTokenRef.current = teamData.resetToken;
         localStorage.removeItem(storageKey);
         setMessages(initialWelcomeMsg);
       } else if (Array.isArray(teamData.chatMessages) && teamData.chatMessages.length > 0) {

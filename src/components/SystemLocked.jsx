@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { AlertOctagon, Unlock } from "lucide-react";
 
 export default function SystemLocked({ onUnlock }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const inputRef = useRef(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -16,6 +17,14 @@ export default function SystemLocked({ onUnlock }) {
     }
   };
 
+  const handleInputFocus = () => {
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    }, 250);
+  };
+
   return (
     <div style={styles.container}>
       <div className="scanlines"></div>
@@ -26,7 +35,7 @@ export default function SystemLocked({ onUnlock }) {
 
       <div className="heist-card red-glow-border" style={styles.card}>
         <div style={styles.iconContainer}>
-          <AlertOctagon size={48} className="pulse-glow" style={styles.icon} />
+          <AlertOctagon size={44} className="pulse-glow" style={styles.icon} />
         </div>
         
         <h1 style={styles.title}>SYSTEM LOCKED</h1>
@@ -38,11 +47,13 @@ export default function SystemLocked({ onUnlock }) {
           <div style={styles.inputGroup}>
             <label style={styles.label}>ENTER ADMIN ACCESS CODE TO OVERRIDE</label>
             <input
+              ref={inputRef}
               type="password"
               className="heist-input"
               style={styles.input}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onFocus={handleInputFocus}
               placeholder="••••••••"
               autoFocus
               required
@@ -64,43 +75,48 @@ export default function SystemLocked({ onUnlock }) {
 const styles = {
   container: {
     position: "fixed",
-    top: 0,
-    left: 0,
+    inset: 0,
     width: "100vw",
-    height: "100vh",
+    height: "100dvh",
     background: "rgba(8, 0, 0, 0.98)",
     zIndex: 9999,
     display: "flex",
     flexDirection: "column",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
-    padding: "20px",
+    padding: "50px 16px 20px",
+    overflowY: "auto",
+    WebkitOverflowScrolling: "touch",
   },
   alertBar: {
-    position: "absolute",
+    position: "fixed",
     top: 0,
     left: 0,
     right: 0,
     background: "#e50914",
     color: "#fff",
     textAlign: "center",
-    padding: "10px",
+    padding: "8px",
     fontWeight: "bold",
     letterSpacing: "2px",
-    fontSize: "12px",
+    fontSize: "11px",
     fontFamily: "var(--font-display)",
     boxShadow: "0 0 20px rgba(229, 9, 20, 0.5)",
+    zIndex: 10000,
   },
   card: {
-    maxWidth: "450px",
+    maxWidth: "420px",
     width: "100%",
-    padding: "40px 30px",
+    padding: "28px 22px",
     background: "rgba(10, 0, 0, 0.95)",
     border: "2px solid #e50914",
     textAlign: "center",
+    marginTop: "20px",
+    marginBottom: "40px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.9)"
   },
   iconContainer: {
-    marginBottom: "20px",
+    marginBottom: "12px",
   },
   icon: {
     color: "#e50914",
@@ -108,28 +124,28 @@ const styles = {
   },
   title: {
     fontFamily: "var(--font-display)",
-    fontSize: "32px",
+    fontSize: "26px",
     color: "#e50914",
     letterSpacing: "2px",
-    marginBottom: "10px",
+    marginBottom: "8px",
   },
   subtitle: {
-    fontSize: "11px",
+    fontSize: "10px",
     color: "var(--text-secondary)",
-    lineHeight: "1.6",
+    lineHeight: "1.5",
     letterSpacing: "1px",
-    marginBottom: "30px",
+    marginBottom: "20px",
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: "20px",
+    gap: "16px",
     textAlign: "left",
   },
   inputGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "6px",
   },
   label: {
     fontSize: "10px",
@@ -141,20 +157,22 @@ const styles = {
     width: "100%",
     textAlign: "center",
     letterSpacing: "4px",
-    fontSize: "18px",
+    fontSize: "16px", /* 16px prevents mobile auto-zoom */
     borderColor: "#e50914",
+    padding: "10px",
   },
   error: {
     color: "#e50914",
     fontSize: "11px",
     border: "1px solid #e50914",
     background: "rgba(229, 9, 20, 0.1)",
-    padding: "10px",
+    padding: "8px",
     textAlign: "center",
     letterSpacing: "1px",
   },
   unlockBtn: {
     width: "100%",
     background: "#e50914",
+    padding: "12px",
   }
 };

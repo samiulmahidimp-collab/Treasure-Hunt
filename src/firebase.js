@@ -11,6 +11,7 @@ import { TEAMS_CONFIG } from "./teamsConfig";
 
 export const generateDefaultTeams = () => {
   const teams = {};
+  const now = Date.now();
   TEAMS_CONFIG.forEach(t => {
     teams[t.id] = {
       id: t.id,
@@ -23,7 +24,9 @@ export const generateDefaultTeams = () => {
       sessionToken: "",
       attempts: 0,
       locked: false,
-      isPaused: false
+      isPaused: false,
+      needsHelp: false,
+      resetToken: now
     };
   });
   return teams;
