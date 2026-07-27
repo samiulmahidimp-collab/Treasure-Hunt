@@ -10,6 +10,7 @@
  */
 import React, { useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import LandingPage from "./components/LandingPage";
 import AdminPortal from "./components/AdminPortal";
 import PlayerPortal from "./components/PlayerPortal";
@@ -34,6 +35,7 @@ export default function App() {
       {role === "player" && <PlayerPortal onBack={() => handleSetRole(null)} />}
       {role === "admin"  && <AdminPortal  onBack={() => handleSetRole(null)} />}
       <Analytics />
+      <SpeedInsights />
     </>
   );
 }
