@@ -77,13 +77,18 @@ export default function PlayerPortal({ onBack }) {
     setSessionToken(token);
     setActiveTeam(teamObj.id);
 
+    const allTeamsData = await dbService.getAllTeams();
+    const existingTeam = allTeamsData[teamObj.id] || {};
+
     await dbService.updateTeam(teamObj.id, {
       name: teamObj.name,
       sessionToken: token,
-      score: teamData?.score || 0,
-      solvedClues: teamData?.solvedClues || [],
-      attempts: teamData?.attempts || 0,
-      locked: teamData?.locked || false,
+      score: existingTeam.score || teamData?.score || 0,
+      solvedClues: existingTeam.solvedClues || teamData?.solvedClues || [],
+      currentClueId: existingTeam.currentClueId || teamData?.currentClueId || null,
+      attempts: existingTeam.attempts || teamData?.attempts || 0,
+      locked: existingTeam.locked || teamData?.locked || false,
+      needsHelp: existingTeam.needsHelp || teamData?.needsHelp || false,
     });
 
     setIsSubmitting(false);

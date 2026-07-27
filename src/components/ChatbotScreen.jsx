@@ -121,7 +121,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     const anyUnsolved = CLUES.filter(c => !solvedSet.has(c.id));
     const candidatePool = stage1Unsolved.length > 0 ? stage1Unsolved : anyUnsolved;
     if (candidatePool.length > 0) {
-      activeClue = candidatePool[Math.floor(Math.random() * candidatePool.length)];
+      activeClue = candidatePool[0];
     }
   }
 
