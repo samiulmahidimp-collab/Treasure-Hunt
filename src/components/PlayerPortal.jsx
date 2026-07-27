@@ -11,8 +11,7 @@ export default function PlayerPortal({ onBack }) {
   const [passwordVal, setPasswordVal] = useState("");
   const [activeTeam, setActiveTeam] = useState("");
   const [sessionToken, setSessionToken] = useState("");
-  const [gameSettings, setGameSettings] = useState({ isStarted: true, isPaused: false });
-  const [bypassedWaiting, setBypassedWaiting] = useState(false);
+  const [gameSettings, setGameSettings] = useState({ isStarted: false, isPaused: false });
   const [teamData, setTeamData] = useState(null);
   const [loginError, setLoginError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,19 +36,18 @@ export default function PlayerPortal({ onBack }) {
 
   // Subscribe to team doc for single-device session enforcement
   useEffect(() => {
-    if (!activeTeam) return;
+    if (!activeTeam || !sessionToken) return;
     const unsub = dbService.subscribeTeam(activeTeam, (data) => {
       if (!data) return;
       setTeamData(data);
-      const activeLocalToken = localStorage.getItem("heist_session_token");
-      if (data.sessionToken && activeLocalToken && data.sessionToken !== activeLocalToken) {
+      if (data.sessionToken && sessionToken && data.sessionToken !== sessionToken) {
         handleLogout();
         setLoginError("SESSION DISCONNECTED: Your team account logged in on another device.");
       }
     });
     return () => unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTeam]);
+  }, [activeTeam, sessionToken]);
 
   const handleTeamSelect = async (e) => {
     e.preventDefault();
@@ -168,6 +166,27 @@ export default function PlayerPortal({ onBack }) {
     );
   }
 
+  // ── Game NOT started by Admin yet ───────────────────────
+  if (!gameSettings.isStarted) {
+    return (
+      <HeistLayout>
+        <div className="heist-waiting">
+          <div className="heist-card heist-waiting-card" style={{ textAlign: "center", padding: "36px 24px" }}>
+            <AlertTriangle size={48} color="#C8102E" className="pulse-glow" style={{ marginBottom: 14 }} />
+            <h2 className="heist-waiting-title" style={{ color: "#C8102E", fontSize: 22, letterSpacing: 2 }}>CHANNEL ENCRYPTED</h2>
+            <p className="heist-waiting-text" style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-secondary)", margin: "14px 0 20px" }}>
+              THE PROFESSOR HAS NOT STARTED THE GAME PROTOCOL YET. MAINTAIN POSITION AND STAND BY FOR THE SIGNAL FROM THE ADMIN...
+            </p>
+            <p className="heist-badge" style={{ marginBottom: 20 }}>OPERATIVE: {activeTeamDisplayName}</p>
+            <button className="heist-btn" onClick={handleLogout} style={{ width: "100%" }}>
+              <LogOut size={14} /> DISCONNECT
+            </button>
+          </div>
+        </div>
+      </HeistLayout>
+    );
+  }
+
   // ── Game paused (Global or Individual) ───────────────────
   if (gameSettings.isPaused || teamData?.isPaused) {
     return (
@@ -194,7 +213,7 @@ export default function PlayerPortal({ onBack }) {
     );
   }
 
-  // ── Active game or waiting for Admin signal ───────────────
+  // ── Active game ─────────────────────────────────────────
   return (
     <ChatbotScreen
       teamName={activeTeamDisplayName}
