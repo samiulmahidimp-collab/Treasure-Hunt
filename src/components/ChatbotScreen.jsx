@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
-import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
+import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import QRScannerModal from "./QRScannerModal";
@@ -27,6 +27,57 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const isLocked        = safeTeamData.locked || false;
   const currentAttempts = safeTeamData.attempts || 0;
   const isAllComplete   = solvedCount >= TOTAL_CLUES_COUNT;
+
+  // Track previous needsHelp state to notify when Admin resolves SOS
+  const prevNeedsHelpRef = useRef(safeTeamData.needsHelp);
+
+  // Lock outer window scrolling for Messenger-style fixed app experience
+  useEffect(() => {
+    document.documentElement.classList.add("chat-active");
+    document.body.classList.add("chat-active");
+
+    const syncViewport = () => {
+      if (window.visualViewport) {
+        document.documentElement.style.setProperty("--vv-height", `${window.visualViewport.height}px`);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", syncViewport);
+      window.visualViewport.addEventListener("scroll", syncViewport);
+      syncViewport();
+    }
+
+    return () => {
+      document.documentElement.classList.remove("chat-active");
+      document.body.classList.remove("chat-active");
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", syncViewport);
+        window.visualViewport.removeEventListener("scroll", syncViewport);
+      }
+    };
+  }, []);
+
+  // Sync Admin Resolution of Help Alert
+  useEffect(() => {
+    if (prevNeedsHelpRef.current && !safeTeamData.needsHelp) {
+      setAlertNotice("✅ ADMIN RESOLVED YOUR ALERT: Assistance acknowledged!");
+      setTimeout(() => setAlertNotice(""), 5000);
+
+      setMessages((prev) => {
+        const resolveMsg = {
+          sender: "professor",
+          text: "✅ ADMIN ALERT RESOLVED: The Professor / Admin has marked your help request as resolved. Maintain position and proceed with decryption.",
+          type: "success"
+        };
+        const updated = [...prev, resolveMsg];
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        dbService.updateTeam(effectiveTeamId, { chatMessages: updated });
+        return updated;
+      });
+    }
+    prevNeedsHelpRef.current = safeTeamData.needsHelp;
+  }, [safeTeamData.needsHelp, effectiveTeamId, storageKey]);
 
   // Anti-collision clue selector with Stage gating
   const getNextClue = async (solvedList) => {
@@ -133,15 +184,52 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     updateMessagesAndSync(updated);
   };
 
-  // Handle QR Code Scanner Callback
+  // Smart QR Code Scanner Handler
   const handleQRScanned = (scannedText) => {
     setShowQRScanner(false);
-    if (scannedText) {
-      const cleanVal = scannedText.trim();
-      setInputVal(cleanVal);
-      setAlertNotice(`QR CODE CAPTURED: "${cleanVal}". Press Send to submit!`);
-      setTimeout(() => setAlertNotice(""), 4000);
+    if (!scannedText) return;
+
+    const raw = scannedText.trim();
+    let extractedCode = raw;
+
+    // Check if scanned QR content is a URL
+    if (raw.startsWith("http://") || raw.startsWith("https://")) {
+      // 1. Open destination URL in a new browser tab so player can view it
+      try {
+        window.open(raw, "_blank", "noopener,noreferrer");
+      } catch (e) {
+        console.error("Popup blocked:", e);
+      }
+
+      // 2. Extract potential decryption code from URL parameters or last path segment
+      try {
+        const parsedUrl = new URL(raw);
+        const params = new URLSearchParams(parsedUrl.search);
+        const paramCode = params.get("code") || params.get("ans") || params.get("key") || params.get("c") || params.get("id");
+
+        if (paramCode) {
+          extractedCode = paramCode.trim();
+        } else {
+          // Extract last non-empty path segment (e.g. 'fod53bl5' from 'https://q.me-qr.com/fod53bl5')
+          const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
+          if (pathSegments.length > 0) {
+            extractedCode = pathSegments[pathSegments.length - 1].trim();
+          }
+        }
+      } catch (e) {
+        const parts = raw.split("/").filter(Boolean);
+        if (parts.length > 1) {
+          extractedCode = parts[parts.length - 1].trim();
+        }
+      }
+
+      setAlertNotice(`🌐 OPENED QR LINK IN NEW TAB! Auto-extracted code candidate: "${extractedCode}"`);
+    } else {
+      setAlertNotice(`📷 QR CODE SCANNED: "${extractedCode}". Press Send to submit!`);
     }
+
+    setInputVal(extractedCode);
+    setTimeout(() => setAlertNotice(""), 5000);
   };
 
   const handleSend = async (e) => {
@@ -265,7 +353,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
 
   return (
     <HeistLayout>
-      <div className="chat-root">
+      <div className="chat-root" style={{ height: "var(--vv-height, 100dvh)" }}>
         {isLocked && <SystemLocked onUnlock={handleUnlockOverride} />}
 
         {/* Success flash */}
@@ -321,16 +409,20 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
         {/* Alert Notification Bar */}
         {alertNotice && (
           <div style={{
-            background: "rgba(200, 16, 46, 0.9)",
+            background: "rgba(200, 16, 46, 0.95)",
             color: "#fff",
             textAlign: "center",
             padding: "8px 16px",
             fontSize: 12,
             fontFamily: "var(--font-mono)",
             letterSpacing: 1,
-            zIndex: 90
+            zIndex: 90,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6
           }}>
-            {alertNotice}
+            <span>{alertNotice}</span>
           </div>
         )}
 
