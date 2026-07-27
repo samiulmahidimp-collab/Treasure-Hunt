@@ -53,14 +53,17 @@ if (isFirebaseConfigured) {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     useMock = false;
+    window.__HEIST_DB_MODE__ = "FIRESTORE_LIVE";
     console.log("Firebase initialized successfully. Running in real-time serverless mode.");
   } catch (error) {
     console.error("Firebase failed to initialize. Falling back to Local/Network API mode:", error);
     useMock = true;
+    window.__HEIST_DB_MODE__ = "LOCAL_FALLBACK";
   }
 } else {
   console.log("No Firebase config found. Running in Local/Network API mode.");
   useMock = true;
+  window.__HEIST_DB_MODE__ = "LOCAL_FALLBACK";
 }
 
 // Local Storage Fallback implementation (used when API is not present on static Vercel deployments)
@@ -134,6 +137,7 @@ export const dbService = {
         }
       }, (error) => {
         console.error("Firestore settings subscription error:", error);
+        alert("DATABASE CONFIG ERROR: Firestore permission denied. Please go to Firebase Console > Firestore Database > Rules, and change rules to allow read/write: 'allow read, write: if true;'");
       });
     } else {
       let isSubscribed = true;
@@ -202,6 +206,8 @@ export const dbService = {
             setDoc(teamsRef, initialTeams);
             callback(initialTeams);
           }
+        }, (error) => {
+          console.error("Firestore teams subscription error:", error);
         });
       };
       return handleSnapshot();
@@ -244,11 +250,18 @@ export const dbService = {
           if (allTeams[teamName]) {
             callback(allTeams[teamName]);
           } else {
-            const defaultTeam = { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false, isPaused: false };
+            const defaultTeams = generateDefaultTeams();
+            const defaultTeam = defaultTeams[teamName] || { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false, isPaused: false };
             updateDoc(docRef, { [teamName]: defaultTeam });
             callback(defaultTeam);
           }
+        } else {
+          const initialTeams = generateDefaultTeams();
+          setDoc(docRef, initialTeams);
+          callback(initialTeams[teamName]);
         }
+      }, (error) => {
+        console.error("Firestore team subscription error:", error);
       });
     } else {
       let isSubscribed = true;
