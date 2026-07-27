@@ -958,21 +958,38 @@ html.chat-active, body.chat-active {
 
 /* ── Mobile Layout Fixes ───────────────────────────── */
 @media (max-width: 768px) {
+  html, body, #root, .heist-bg-root, .heist-screen-content {
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+
   .chat-root {
-    height: 100dvh;
+    height: 100dvh !important;
+    min-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    position: relative !important;
   }
   
   .chat-body {
-    padding: 10px;
-    gap: 10px;
-    height: calc(100dvh - 56px);
+    padding: 8px 10px 10px !important;
+    gap: 8px !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    min-height: 0 !important;
+    height: auto !important;
   }
 
   .clue-panel {
     padding: 10px 12px;
     gap: 8px;
     flex-shrink: 0;
-    max-height: 220px;
+    max-height: 200px;
   }
 
   .clue-header-title {
@@ -991,14 +1008,14 @@ html.chat-active, body.chat-active {
   }
 
   .clue-img-wrap {
-    flex: 0 0 110px;
-    max-width: 110px;
-    min-height: 80px;
-    max-height: 100px;
+    flex: 0 0 100px;
+    max-width: 100px;
+    min-height: 75px;
+    max-height: 90px;
   }
 
   .clue-img-wrap img {
-    max-height: 100px;
+    max-height: 90px;
     object-fit: contain;
   }
 
@@ -1018,6 +1035,9 @@ html.chat-active, body.chat-active {
   }
 
   .chat-messages {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
     gap: 10px;
     padding-right: 2px;
   }
@@ -1033,33 +1053,36 @@ html.chat-active, body.chat-active {
   }
 
   .chat-input-bar {
-    position: sticky;
-    bottom: 0;
-    z-index: 50;
-    padding: 4px 8px 4px 10px;
-    gap: 6px;
-    box-shadow: 0 -4px 16px rgba(0,0,0,0.8);
-    flex-shrink: 0;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 100 !important;
+    padding: 6px 8px 6px 12px !important;
+    gap: 8px !important;
+    box-shadow: 0 -6px 20px rgba(0,0,0,0.9) !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    background: #080505 !important;
   }
 
-  .chat-input-field {
-    font-size: 12px;
-    padding: 8px 0;
-    letter-spacing: 1px;
+  .chat-input-field, .heist-input {
+    font-size: 16px !important; /* 16px font prevents iOS & Android auto-zoom on input focus */
+    padding: 8px 0 !important;
+    letter-spacing: 1px !important;
   }
 
   .heist-header {
-    padding: 10px 14px;
+    padding: 8px 12px !important;
   }
 
   .heist-header-logo {
-    font-size: 14px;
-    letter-spacing: 1.5px;
+    font-size: 13px !important;
+    letter-spacing: 1.5px !important;
   }
 
   .heist-badge {
-    font-size: 9px;
-    padding: 4px 8px;
+    font-size: 9px !important;
+    padding: 3px 6px !important;
   }
 }
+
 

@@ -190,46 +190,40 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     if (!scannedText) return;
 
     const raw = scannedText.trim();
-    let extractedCode = raw;
+    let finalCode = raw;
 
-    // Check if scanned QR content is a URL
+    // Check if scanned QR content is a Web URL
     if (raw.startsWith("http://") || raw.startsWith("https://")) {
-      // 1. Open destination URL in a new browser tab so player can view it
+      // 1. Open destination URL in a new browser tab so player can inspect the page
       try {
         window.open(raw, "_blank", "noopener,noreferrer");
       } catch (e) {
         console.error("Popup blocked:", e);
       }
 
-      // 2. Extract potential decryption code from URL parameters or last path segment
+      // 2. Check if URL has an explicit code parameter (e.g. ?code=123 or ?answer=ABC)
       try {
         const parsedUrl = new URL(raw);
         const params = new URLSearchParams(parsedUrl.search);
-        const paramCode = params.get("code") || params.get("ans") || params.get("key") || params.get("c") || params.get("id");
+        const paramCode = params.get("code") || params.get("ans") || params.get("key") || params.get("answer") || params.get("c");
 
         if (paramCode) {
-          extractedCode = paramCode.trim();
+          finalCode = paramCode.trim();
+          setAlertNotice(`🌐 QR LINK OPENED IN NEW TAB! Extracted code parameter: "${finalCode}"`);
         } else {
-          // Extract last non-empty path segment (e.g. 'fod53bl5' from 'https://q.me-qr.com/fod53bl5')
-          const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
-          if (pathSegments.length > 0) {
-            extractedCode = pathSegments[pathSegments.length - 1].trim();
-          }
+          finalCode = raw;
+          setAlertNotice(`🌐 QR LINK OPENED IN NEW TAB! Scanned link auto-filled. Inspect the open tab for your clue!`);
         }
       } catch (e) {
-        const parts = raw.split("/").filter(Boolean);
-        if (parts.length > 1) {
-          extractedCode = parts[parts.length - 1].trim();
-        }
+        finalCode = raw;
+        setAlertNotice(`🌐 QR LINK OPENED IN NEW TAB! Press Send to submit.`);
       }
-
-      setAlertNotice(`🌐 OPENED QR LINK IN NEW TAB! Auto-extracted code candidate: "${extractedCode}"`);
     } else {
-      setAlertNotice(`📷 QR CODE SCANNED: "${extractedCode}". Press Send to submit!`);
+      setAlertNotice(`📷 QR CODE SCANNED: "${finalCode}". Press Send to submit!`);
     }
 
-    setInputVal(extractedCode);
-    setTimeout(() => setAlertNotice(""), 5000);
+    setInputVal(finalCode);
+    setTimeout(() => setAlertNotice(""), 6000);
   };
 
   const handleSend = async (e) => {
