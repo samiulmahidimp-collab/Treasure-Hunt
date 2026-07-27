@@ -35,19 +35,20 @@ export default function PlayerPortal({ onBack }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Subscribe to team doc for single-device enforcement
+  // Subscribe to team doc for single-device session enforcement
   useEffect(() => {
     if (!activeTeam) return;
     const unsub = dbService.subscribeTeam(activeTeam, (data) => {
       setTeamData(data);
-      if (data?.sessionToken && sessionToken && data.sessionToken !== sessionToken) {
-        alert("SECURITY BREACH: Your team logged in on another device! Disconnecting.");
+      const activeLocalToken = localStorage.getItem("heist_session_token");
+      if (data?.sessionToken && activeLocalToken && data.sessionToken !== activeLocalToken) {
         handleLogout();
+        alert("SESSION TERMINATED: Your team account logged in on another device/tab.");
       }
     });
     return () => unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTeam, sessionToken]);
+  }, [activeTeam]);
 
   const handleTeamSelect = async (e) => {
     e.preventDefault();
