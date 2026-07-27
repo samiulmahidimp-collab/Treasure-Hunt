@@ -24,27 +24,78 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
     return () => unsubClues();
   }, []);
 
-  // ── Initial Welcome Messages ──────────────────────────────
+  const solvedCount     = teamData?.solvedClues ? teamData.solvedClues.length : 0;
+  const isLocked        = teamData?.locked || false;
+  const currentAttempts = teamData?.attempts || 0;
+  const isGameComplete  = solvedCount >= 11;
+
+  // Determine current stage & clue info
+  const getCurrentStageInfo = (solvedIndex) => {
+    if (solvedIndex >= 11) return { stage: 3, stageName: "Stage 3: The Final Round", clueInStage: 1, totalInStage: 1 };
+    if (solvedIndex >= 10) return { stage: 3, stageName: "Stage 3: The Final Round", clueInStage: 1, totalInStage: 1 };
+    if (solvedIndex >= 8)  return { stage: 2, stageName: "Stage 2: The Qualifiers", clueInStage: solvedIndex - 7, totalInStage: 2 };
+    return { stage: 1, stageName: "Stage 1: The Initial Hunt", clueInStage: solvedIndex + 1, totalInStage: 8 };
+  };
+
+  const currentStageMeta = getCurrentStageInfo(solvedCount);
+
+  // Active clue from real-time cluesList
+  const activeClue = cluesList.find(c => c.id === teamData?.currentClueId) || cluesList[solvedCount] || cluesList[0];
+
+  // Helper to safely format image URL
+  const getClueImageUrl = (clue) => {
+    if (!clue) return "/pictures/stage1/afrewa.png";
+    if (clue.image_path) return clue.image_path;
+    return getDynamicImagePath(clue.stage || 1, clue.imageFilename || clue.image);
+  };
+
+  // ── Initial Chat Message Stream ───────────────────────────
   useEffect(() => {
     if (!teamData) return;
-    const solvedCount = teamData.solvedClues ? teamData.solvedClues.length : 0;
+
     if (messages.length === 0) {
-      if (solvedCount === 0 && !teamData.currentClueId) {
-        setMessages([{
-          sender: "professor",
-          text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. Stage 1 (The Initial Hunt) is active. Are you ready to initiate the heist?`,
-          type: "welcome",
-        }]);
+      if (solvedCount === 0) {
+        setMessages([
+          {
+            sender: "professor",
+            text: `Bella ciao, team ${teamName.toUpperCase()}! I am The Professor. ${currentStageMeta.stageName} is active. Type 'START' or enter your answer below.`,
+            type: "welcome",
+          },
+          {
+            sender: "professor",
+            text: `${currentStageMeta.stageName.toUpperCase()} — CLUE #1: Analyze this image and enter the secret code:`,
+            clue: activeClue,
+          }
+        ]);
+        // Ensure currentClueId is saved in database
+        if (activeClue && !teamData.currentClueId) {
+          dbService.updateTeam(teamName, { currentClueId: activeClue.id, stage: 1, attempts: 0, locked: false });
+        }
+      } else if (!isGameComplete) {
+        setMessages([
+          {
+            sender: "professor",
+            text: `Operatives ${teamName.toUpperCase()}, welcome back. Decrypted logs show you have solved ${solvedCount} clue(s).`,
+            type: "system",
+          },
+          {
+            sender: "professor",
+            text: `ACTIVE CLUE (${currentStageMeta.stageName}): Analyze this image and enter the secret code:`,
+            clue: activeClue,
+          }
+        ]);
       } else {
-        setMessages([{
-          sender: "professor",
-          text: `Operatives ${teamName.toUpperCase()}, welcome back to mission control. Decrypted logs show you have solved ${solvedCount} clue(s). Let's continue the heist.`,
-          type: "system",
-        }]);
+        setMessages([
+          {
+            sender: "professor",
+            text: `Operatives ${teamName.toUpperCase()}, mission complete! You have solved all 11 clues across all 3 stages.`,
+            type: "system",
+          }
+        ]);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamData]);
+  }, [teamData, cluesList]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,31 +111,6 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
     );
   }
 
-  const solvedCount      = teamData.solvedClues ? teamData.solvedClues.length : 0;
-  const isLocked         = teamData.locked || false;
-  const currentAttempts  = teamData.attempts || 0;
-  const isGameComplete   = solvedCount >= 11;
-
-  // Determine current stage & clue based on solvedCount
-  const getCurrentStageInfo = (solvedIndex) => {
-    if (solvedIndex >= 11) return { stage: 3, stageName: "Stage 3: The Final Round", clueInStage: 1, totalInStage: 1 };
-    if (solvedIndex >= 10) return { stage: 3, stageName: "Stage 3: The Final Round", clueInStage: 1, totalInStage: 1 };
-    if (solvedIndex >= 8)  return { stage: 2, stageName: "Stage 2: The Qualifiers", clueInStage: solvedIndex - 7, totalInStage: 2 };
-    return { stage: 1, stageName: "Stage 1: The Initial Hunt", clueInStage: solvedIndex + 1, totalInStage: 8 };
-  };
-
-  const currentStageMeta = getCurrentStageInfo(solvedCount);
-
-  // Active clue from real-time cluesList
-  const activeClue = cluesList.find(c => c.id === teamData.currentClueId) || cluesList[solvedCount] || cluesList[0];
-
-  // Helper to safely format image URL
-  const getClueImageUrl = (clue) => {
-    if (!clue) return "/pictures/stage1/afrewa.png";
-    if (clue.image_path) return clue.image_path;
-    return getDynamicImagePath(clue.stage || 1, clue.imageFilename || clue.image);
-  };
-
   const handleSend = async (e) => {
     e.preventDefault();
     if (!inputVal.trim() || isLocked || isGameComplete) return;
@@ -93,38 +119,28 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
     setInputVal("");
     setMessages(prev => [...prev, { sender: "player", text: userText }]);
 
-    // Welcome flow & start commands
-    const lastMsg = messages[messages.length - 1];
-    const isWelcomeStep = lastMsg?.type === "welcome";
-    const startKeywords = ["yes", "yeah", "si", "sí", "y", "ok", "ready", "sure", "start", "go", "begin", "play", "lets go", "let's go"];
+    const startKeywords = ["start", "go", "begin", "play", "ready", "yes", "yeah", "si", "sí", "y", "ok", "sure", "clue", "lets go", "let's go"];
+    const isStartCmd = startKeywords.some(w => userText.toLowerCase().includes(w));
 
-    if (isWelcomeStep || (!teamData.currentClueId && solvedCount === 0)) {
-      if (startKeywords.some(w => userText.toLowerCase().includes(w))) {
-        const firstClue = cluesList[0] || DEFAULT_CLUES[0];
-        await dbService.updateTeam(teamName, { currentClueId: firstClue.id, stage: 1, attempts: 0, locked: false });
+    // If user explicitly asks for clue / types start command
+    if (isStartCmd) {
+      if (activeClue) {
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: "Excellent. Stage 1 (The Initial Hunt) begins now. Clue 1 incoming...",
+          text: `ACTIVE CLUE (${currentStageMeta.stageName} — Clue #${currentStageMeta.clueInStage}): Analyze this image and enter the secret code:`,
+          clue: activeClue,
         }]);
-        setTimeout(() => {
-          setMessages(prev => [...prev, {
-            sender: "professor",
-            text: `STAGE 1 — CLUE #1: Analyze this image and enter the secret code to proceed.`,
-            clue: firstClue,
-          }]);
-        }, 1000);
       } else {
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: "We don't have time for hesitation. Lives are on the line. When you are ready, type 'START' or 'YES'.",
+          text: "Preparing next clue channel...",
         }]);
       }
       return;
     }
 
-    // Gameplay answering logic
+    // Gameplay answer check
     if (activeClue) {
-      // Secure Answer Check: normalize whitespace and lowercase comparison
       const normalizedInput = userText.trim().toLowerCase();
       const normalizedAnswer = (activeClue.answer || "").trim().toLowerCase();
 
@@ -154,7 +170,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
             locked: false,
           });
         } else {
-          // Get next sequential clue from real-time list
+          // Get next sequential clue
           const nextClue = cluesList[newSolvedCount] || cluesList[cluesList.length - 1];
           const nextStageInfo = getCurrentStageInfo(newSolvedCount);
 
@@ -202,16 +218,10 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
           }]);
         }
       }
-    } else if (startKeywords.some(w => userText.toLowerCase().includes(w)) || userText.toLowerCase().includes("clue")) {
-      setMessages(prev => [...prev, {
-        sender: "professor",
-        text: `Active ${currentStageMeta.stageName} (Clue #${currentStageMeta.clueInStage}): Decode this visual file:`,
-        clue: activeClue,
-      }]);
     } else {
       setMessages(prev => [...prev, {
         sender: "professor",
-        text: "The communications tunnel is active. Please focus on the mission protocols.",
+        text: "The communications tunnel is active. Type 'START' or 'CLUE' to request your clue image.",
       }]);
     }
   };
@@ -285,7 +295,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
           </div>
         ) : (
           <>
-            {/* Active Clue Panel */}
+            {/* Active Clue Top Panel */}
             {activeClue && (
               <div className="clue-panel">
                 <div className="clue-header">
