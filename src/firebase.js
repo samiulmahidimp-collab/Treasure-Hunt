@@ -9,15 +9,17 @@ import {
 } from "firebase/firestore";
 import { TEAMS_CONFIG } from "./teamsConfig";
 
-// Generate initial state for all configured teams
 export const generateDefaultTeams = () => {
   const teams = {};
   TEAMS_CONFIG.forEach(t => {
     teams[t.id] = {
+      id: t.id,
       name: t.name,
       password: t.password,
       score: 0,
       solvedClues: [],
+      currentClueId: null,
+      chatMessages: [],
       sessionToken: "",
       attempts: 0,
       locked: false,
@@ -37,7 +39,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Check if firebase is configured
 const isFirebaseConfigured = 
   firebaseConfig.apiKey && 
   firebaseConfig.projectId && 
@@ -53,66 +54,25 @@ if (isFirebaseConfigured) {
     useMock = false;
     console.log("Firebase initialized successfully. Running in real-time serverless mode.");
   } catch (error) {
-    console.error("Firebase failed to initialize. Falling back to local state:", error);
+    console.error("Firebase failed to initialize. Falling back to Network API mode:", error);
     useMock = true;
   }
 } else {
-  console.log("No Firebase config found. Running in Local Storage Mock database mode.");
+  console.log("Running in Network Server Game State mode.");
   useMock = true;
 }
 
-// ==========================================
-// MOCK DATABASE IMPLEMENTATION (Local Storage)
-// ==========================================
-const MOCK_STORAGE_KEY = "la_casa_del_tesoro_db_v3";
-
-const getMockDB = () => {
-  const data = localStorage.getItem(MOCK_STORAGE_KEY);
-  if (data) {
-    const parsed = JSON.parse(data);
-    // Ensure all 8 teams exist and have updated passwords in current state
-    const defaultTeams = generateDefaultTeams();
-    let updated = false;
-    Object.keys(defaultTeams).forEach(key => {
-      if (!parsed.teams[key]) {
-        parsed.teams[key] = defaultTeams[key];
-        updated = true;
-      } else if (parsed.teams[key].password !== defaultTeams[key].password) {
-        parsed.teams[key].password = defaultTeams[key].password;
-        updated = true;
-      }
-    });
-    if (updated) {
-      localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(parsed));
-    }
-    return parsed;
-  }
-
-  // Initial Mock State
-  const initialState = {
-    gameSettings: {
-      isStarted: false,
-      isPaused: false
-    },
-    teams: generateDefaultTeams()
-  };
-  localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(initialState));
-  return initialState;
+// Network API fetcher helper
+const fetchGameState = async () => {
+  try {
+    const res = await fetch("/api/game-state");
+    if (res.ok) return await res.json();
+  } catch (e) {}
+  return { gameSettings: { isStarted: false, isPaused: false }, teams: generateDefaultTeams() };
 };
-
-const updateMockDB = (updater) => {
-  const dbState = getMockDB();
-  updater(dbState);
-  localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(dbState));
-  window.dispatchEvent(new Event("mock-db-update"));
-};
-
-// ==========================================
-// EXPORTED DATABASE INTERFACE
-// ==========================================
 
 export const dbService = {
-  // Subscribe to Global Game Settings
+  // Subscribe to Global Game Settings (polls every 1s across network)
   subscribeGameSettings: (callback) => {
     if (!useMock) {
       const docRef = doc(db, "game_settings", "settings");
@@ -128,16 +88,17 @@ export const dbService = {
         console.error("Firestore settings subscription error:", error);
       });
     } else {
-      const handleUpdate = () => {
-        const state = getMockDB();
-        callback(state.gameSettings);
+      let isSubscribed = true;
+      const poll = async () => {
+        if (!isSubscribed) return;
+        const state = await fetchGameState();
+        callback(state.gameSettings || { isStarted: false, isPaused: false });
       };
-      window.addEventListener("mock-db-update", handleUpdate);
-      window.addEventListener("storage", handleUpdate);
-      handleUpdate();
+      poll();
+      const intervalId = setInterval(poll, 1000);
       return () => {
-        window.removeEventListener("mock-db-update", handleUpdate);
-        window.removeEventListener("storage", handleUpdate);
+        isSubscribed = false;
+        clearInterval(intervalId);
       };
     }
   },
@@ -148,13 +109,15 @@ export const dbService = {
       const docRef = doc(db, "game_settings", "settings");
       await setDoc(docRef, settings, { merge: true });
     } else {
-      updateMockDB((state) => {
-        state.gameSettings = { ...state.gameSettings, ...settings };
+      await fetch("/api/update-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings)
       });
     }
   },
 
-  // Subscribe to all teams for Leaderboard
+  // Subscribe to all teams for Leaderboard (polls every 1s across network)
   subscribeTeams: (callback) => {
     if (!useMock) {
       const handleSnapshot = () => {
@@ -171,21 +134,22 @@ export const dbService = {
       };
       return handleSnapshot();
     } else {
-      const handleUpdate = () => {
-        const state = getMockDB();
-        callback(state.teams);
+      let isSubscribed = true;
+      const poll = async () => {
+        if (!isSubscribed) return;
+        const state = await fetchGameState();
+        callback(state.teams || generateDefaultTeams());
       };
-      window.addEventListener("mock-db-update", handleUpdate);
-      window.addEventListener("storage", handleUpdate);
-      handleUpdate();
+      poll();
+      const intervalId = setInterval(poll, 1000);
       return () => {
-        window.removeEventListener("mock-db-update", handleUpdate);
-        window.removeEventListener("storage", handleUpdate);
+        isSubscribed = false;
+        clearInterval(intervalId);
       };
     }
   },
 
-  // Subscribe to a specific team's details
+  // Subscribe to a specific team's details (polls every 1s across network)
   subscribeTeam: (teamName, callback) => {
     if (!useMock) {
       const docRef = doc(db, "game_settings", "teams_list");
@@ -202,18 +166,19 @@ export const dbService = {
         }
       });
     } else {
-      const handleUpdate = () => {
-        const state = getMockDB();
-        if (state.teams[teamName]) {
+      let isSubscribed = true;
+      const poll = async () => {
+        if (!isSubscribed) return;
+        const state = await fetchGameState();
+        if (state.teams && state.teams[teamName]) {
           callback(state.teams[teamName]);
         }
       };
-      window.addEventListener("mock-db-update", handleUpdate);
-      window.addEventListener("storage", handleUpdate);
-      handleUpdate();
+      poll();
+      const intervalId = setInterval(poll, 1000);
       return () => {
-        window.removeEventListener("mock-db-update", handleUpdate);
-        window.removeEventListener("storage", handleUpdate);
+        isSubscribed = false;
+        clearInterval(intervalId);
       };
     }
   },
@@ -233,12 +198,10 @@ export const dbService = {
         await setDoc(docRef, initialTeams);
       }
     } else {
-      updateMockDB((state) => {
-        if (!state.teams[teamName]) {
-          const defaults = generateDefaultTeams();
-          state.teams[teamName] = defaults[teamName] || { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false, isPaused: false };
-        }
-        state.teams[teamName] = { ...state.teams[teamName], ...teamData };
+      await fetch("/api/update-team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId: teamName, teamData })
       });
     }
   },
@@ -250,7 +213,7 @@ export const dbService = {
       const snap = await getDoc(docRef);
       return snap.exists() ? snap.data() : {};
     } else {
-      const state = getMockDB();
+      const state = await fetchGameState();
       return state.teams || {};
     }
   },
@@ -266,10 +229,7 @@ export const dbService = {
       await setDoc(settingsRef, defaultSettings);
       await setDoc(teamsRef, defaultTeams);
     } else {
-      updateMockDB((state) => {
-        state.gameSettings = defaultSettings;
-        state.teams = defaultTeams;
-      });
+      await fetch("/api/reset-game", { method: "POST" });
     }
   }
 };

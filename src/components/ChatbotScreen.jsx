@@ -13,12 +13,21 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const [zoomImage, setZoomImage] = useState(null);
   const messagesEndRef = useRef(null);
 
-  const storageKey = `heist_chat_${teamId || teamName}`;
+  const effectiveTeamId = teamId || teamData?.id || teamName;
+  const storageKey = `heist_chat_${effectiveTeamId}`;
 
-  // ── Restore Chat Thread from localStorage on mount ─────────
+  // ── Restore Chat Thread from DB or localStorage on mount ───
   useEffect(() => {
     if (!teamData) return;
 
+    // 1. Prefer chat history from server DB if available
+    if (teamData.chatMessages && Array.isArray(teamData.chatMessages) && teamData.chatMessages.length > 0) {
+      setMessages(teamData.chatMessages);
+      localStorage.setItem(storageKey, JSON.stringify(teamData.chatMessages));
+      return;
+    }
+
+    // 2. Fallback to localStorage
     const saved = localStorage.getItem(storageKey);
     if (saved) {
       try {
@@ -28,15 +37,16 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
           return;
         }
       } catch (e) {
-        console.error("Error restoring chat thread:", e);
+        console.error("Error restoring local chat thread:", e);
       }
     }
 
+    // 3. Initial welcome message
     const solvedCount = teamData.solvedClues ? teamData.solvedClues.length : 0;
     if (solvedCount === 0 && !teamData.currentClueId) {
       setMessages([{
         sender: "professor",
-        text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Are you ready to initiate the heist?`,
+        text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Type your answer code below or type 'START' to receive your first clue.`,
         type: "welcome",
       }]);
     } else {
@@ -49,12 +59,12 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamData]);
 
-  // Save chat thread to localStorage
-  useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem(storageKey, JSON.stringify(messages));
-    }
-  }, [messages, storageKey]);
+  // Save chat thread to localStorage & sync to DB
+  const updateMessagesAndSync = (newMessages) => {
+    setMessages(newMessages);
+    localStorage.setItem(storageKey, JSON.stringify(newMessages));
+    dbService.updateTeam(effectiveTeamId, { chatMessages: newMessages });
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -75,7 +85,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const currentAttempts = teamData.attempts || 0;
   const isAllComplete   = solvedCount >= TOTAL_CLUES_COUNT;
 
-  // Resolve active clue from DB or fallback
+  // Resolve active clue from DB
   let activeClue = CLUES.find(c => c.id === teamData.currentClueId);
 
   // Anti-collision clue selector with Stage gating (Stage 1: 8 clues, Stage 2: 2 clues, Final: 1 clue)
@@ -111,51 +121,44 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     setInputVal("");
 
     const newPlayerMsg = { sender: "player", text: userText };
-    setMessages(prev => [...prev, newPlayerMsg]);
+    let currentMsgList = [...messages, newPlayerMsg];
+    updateMessagesAndSync(currentMsgList);
 
-    const lastMsg = messages[messages.length - 1];
-    const isWelcomeStep = lastMsg?.type === "welcome";
     const startKeywords = ["yes", "yeah", "si", "sí", "y", "ok", "ready", "sure", "start", "go", "begin", "play", "lets go", "let's go"];
 
-    // 1. Initial Start / Welcome trigger
-    if (isWelcomeStep || (!teamData.currentClueId && solvedCount === 0)) {
-      if (startKeywords.some(w => userText.toLowerCase().includes(w))) {
-        const firstClue = await getNextClue([]);
-        if (firstClue) {
-          await dbService.updateTeam(teamId || teamName, { currentClueId: firstClue.id, attempts: 0, locked: false });
-          setMessages(prev => [...prev, {
-            sender: "professor",
-            text: `STAGE 1 - CLUE #1: Analyze the visual file above. Enter the decryption code to proceed.`,
-            clue: firstClue,
-          }]);
-        }
-      } else {
-        setMessages(prev => [...prev, {
-          sender: "professor",
-          text: "We don't have time for hesitation. Type 'START' or 'YES' to receive your first clue.",
-        }]);
-      }
-      return;
-    }
-
-    // 2. Resolve target clue for answer checking
+    // Ensure target clue exists
     let clueToCheck = activeClue;
     if (!clueToCheck) {
       clueToCheck = await getNextClue(teamData.solvedClues || []);
       if (clueToCheck) {
-        await dbService.updateTeam(teamId || teamName, { currentClueId: clueToCheck.id, attempts: 0, locked: false });
+        await dbService.updateTeam(effectiveTeamId, { currentClueId: clueToCheck.id, attempts: 0, locked: false });
+        activeClue = clueToCheck;
       }
     }
 
-    if (!clueToCheck) {
-      setMessages(prev => [...prev, {
-        sender: "professor",
-        text: "No active clue assigned. Type 'START' to request your next assignment.",
-      }]);
+    // Check if input is a simple start keyword when no clue has been answered yet
+    if (startKeywords.includes(userText.toLowerCase()) && solvedCount === 0) {
+      if (clueToCheck) {
+        currentMsgList = [...currentMsgList, {
+          sender: "professor",
+          text: `STAGE 1 - CLUE #1: Analyze the visual file above. Enter the decryption code to proceed.`,
+          clue: clueToCheck,
+        }];
+        updateMessagesAndSync(currentMsgList);
+      }
       return;
     }
 
-    // 3. Evaluate answer correctness
+    if (!clueToCheck) {
+      currentMsgList = [...currentMsgList, {
+        sender: "professor",
+        text: "No active clue assigned. Contact The Professor.",
+      }];
+      updateMessagesAndSync(currentMsgList);
+      return;
+    }
+
+    // Evaluate answer correctness
     const isCorrect = userText.toLowerCase() === clueToCheck.answer.toLowerCase();
 
     if (isCorrect) {
@@ -165,28 +168,29 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
       const newSolvedClues = [...(teamData.solvedClues || []), clueToCheck.id];
       const newSolvedCount = newSolvedClues.length;
 
-      let successMsg = `CORRECT CODE CRACKED! Code: "${clueToCheck.answer.toUpperCase()}". Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`;
+      let successMsg = `CORRECT CODE CRACKED! Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`;
       if (newSolvedCount === 8) {
         successMsg = `STAGE 1 COMPLETE! All 8 initial clues decrypted. Advancing to Stage 2 (Semi-Final)...`;
       } else if (newSolvedCount === 10) {
         successMsg = `STAGE 2 COMPLETE! Advancing to Final Stage (Grand Vault)...`;
       }
 
-      setMessages(prev => [...prev, {
+      currentMsgList = [...currentMsgList, {
         sender: "professor",
         text: successMsg,
         type: "success",
-      }]);
+      }];
+      updateMessagesAndSync(currentMsgList);
 
       if (newSolvedCount >= TOTAL_CLUES_COUNT) {
-        await dbService.updateTeam(teamId || teamName, {
+        await dbService.updateTeam(effectiveTeamId, {
           score: newSolvedCount, solvedClues: newSolvedClues,
           currentClueId: null, attempts: 0, locked: false,
         });
       } else {
         const nextClue = await getNextClue(newSolvedClues);
         if (nextClue) {
-          await dbService.updateTeam(teamId || teamName, {
+          await dbService.updateTeam(effectiveTeamId, {
             score: newSolvedCount, solvedClues: newSolvedClues,
             currentClueId: nextClue.id, attempts: 0, locked: false,
           });
@@ -195,11 +199,18 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
             let clueNumInStage = newSolvedCount + 1;
             if (currentStageNum === 2) clueNumInStage = newSolvedCount - 7;
             if (currentStageNum === 3) clueNumInStage = 1;
-            setMessages(prev => [...prev, {
+
+            const nextClueMsg = {
               sender: "professor",
               text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`,
               clue: nextClue,
-            }]);
+            };
+            setMessages(prev => {
+              const updated = [...prev, nextClueMsg];
+              localStorage.setItem(storageKey, JSON.stringify(updated));
+              dbService.updateTeam(effectiveTeamId, { chatMessages: updated });
+              return updated;
+            });
           }, 1200);
         }
       }
@@ -209,29 +220,32 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
       const remaining = Math.max(0, 3 - nextAttempts);
 
       if (nextAttempts >= 3) {
-        await dbService.updateTeam(teamId || teamName, { attempts: nextAttempts, locked: true });
-        setMessages(prev => [...prev, {
+        await dbService.updateTeam(effectiveTeamId, { attempts: nextAttempts, locked: true });
+        currentMsgList = [...currentMsgList, {
           sender: "professor",
           text: `WRONG ANSWER: "${userText}". 3 failed attempts reached. System locked. Request Professor override to unlock.`,
           type: "error",
-        }]);
+        }];
+        updateMessagesAndSync(currentMsgList);
       } else {
-        await dbService.updateTeam(teamId || teamName, { attempts: nextAttempts });
-        setMessages(prev => [...prev, {
+        await dbService.updateTeam(effectiveTeamId, { attempts: nextAttempts });
+        currentMsgList = [...currentMsgList, {
           sender: "professor",
           text: `WRONG ANSWER: "${userText}". Attempts: ${nextAttempts} / 3 (${remaining} remaining). Try again!`,
           type: "error",
-        }]);
+        }];
+        updateMessagesAndSync(currentMsgList);
       }
     }
   };
 
   const handleUnlockOverride = async () => {
-    await dbService.updateTeam(teamId || teamName, { attempts: 0, locked: false });
-    setMessages(prev => [...prev, {
+    await dbService.updateTeam(effectiveTeamId, { attempts: 0, locked: false });
+    const overrideMsgList = [...messages, {
       sender: "professor",
       text: "SYSTEM OVERRIDE SUCCESSFUL. Access granted. You have 3 fresh attempts to solve the clue.",
-    }]);
+    }];
+    updateMessagesAndSync(overrideMsgList);
   };
 
   return (
