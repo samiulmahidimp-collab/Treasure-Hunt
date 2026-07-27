@@ -66,6 +66,16 @@ export default function AdminPortal({ onBack }) {
     await dbService.updateTeam(teamName, { attempts: 0, locked: false });
   };
 
+  // Admin resolves team help request
+  const handleResolveHelpTeam = async (teamId) => {
+    await dbService.updateTeam(teamId, { needsHelp: false, helpRequestedAt: null });
+    // Also resolve by team name in case team was updated using team name
+    const teamObj = cluesList.find(t => t.id === teamId);
+    if (teamObj && teamObj.name) {
+      await dbService.updateTeam(teamObj.name, { needsHelp: false, helpRequestedAt: null });
+    }
+  };
+
   // Edit clue content
   const startEditClue = (clue) => {
     setEditingClueId(clue.id);
@@ -303,6 +313,7 @@ export default function AdminPortal({ onBack }) {
               teams={teams}
               onTogglePauseTeam={handleTogglePauseTeam}
               onUnlockTeam={handleUnlockTeam}
+              onResolveHelpTeam={handleResolveHelpTeam}
             />
           </section>
         ) : (

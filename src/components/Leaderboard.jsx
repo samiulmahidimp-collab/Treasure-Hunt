@@ -3,7 +3,7 @@ import { CheckCircle, ShieldAlert, Pause, Play, Unlock } from "lucide-react";
 import { TOTAL_CLUES_COUNT } from "../clues";
 import { TEAMS_CONFIG } from "../teamsConfig";
 
-export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) {
+export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, onResolveHelpTeam }) {
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
       <table className="heist-table">
@@ -19,8 +19,7 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
         </thead>
         <tbody>
           {TEAMS_CONFIG.map((t) => {
-            const teamKey = t.id;
-            const data = (teams && teams[teamKey]) || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [] };
+            const data = (teams && (teams[t.id] || teams[t.name])) || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [], needsHelp: false };
             const solvedCount = data.solvedClues ? data.solvedClues.length : (data.score || 0);
             const remainingAttempts = 3 - (data.attempts || 0);
             const isDanger = remainingAttempts === 1 && !data.locked;
@@ -125,17 +124,28 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       {data.needsHelp && (
                         <button
+                          type="button"
                           className="heist-btn-solid"
                           style={{
                             padding: "4px 10px",
                             fontSize: 11,
                             background: "#ef4444",
                             borderColor: "#ef4444",
+                            color: "#fff",
                             display: "inline-flex",
                             alignItems: "center",
-                            gap: 4
+                            gap: 4,
+                            cursor: "pointer"
                           }}
-                          onClick={() => dbService.updateTeam(t.id, { needsHelp: false })}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (onResolveHelpTeam) {
+                              await onResolveHelpTeam(t.id);
+                            } else {
+                              await dbService.updateTeam(t.id, { needsHelp: false });
+                              if (t.name) await dbService.updateTeam(t.name, { needsHelp: false });
+                            }
+                          }}
                         >
                           <CheckCircle size={12} />
                           <span>RESOLVE HELP</span>
