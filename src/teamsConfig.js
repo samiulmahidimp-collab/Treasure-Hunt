@@ -39,6 +39,21 @@ export const TEAMS_CONFIG = [
     id: "team_nexus",
     name: "Team nexus",
     password: "Gandu"
+  },
+  {
+    id: "the_path_finders",
+    name: "The Path Finders",
+    password: "pangash"
+  },
+  {
+    id: "dukes_and_duchesses_2",
+    name: "Dukes and Duchesses 2.0",
+    password: "chotadon"
+  },
+  {
+    id: "team_lannisters",
+    name: "Team Lannisters",
+    password: "harbojjat"
   }
 ];
 
