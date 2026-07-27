@@ -166,26 +166,7 @@ export default function PlayerPortal({ onBack }) {
     );
   }
 
-  // ── Game NOT started by Admin yet ───────────────────────
-  if (!gameSettings.isStarted) {
-    return (
-      <HeistLayout>
-        <div className="heist-waiting">
-          <div className="heist-card heist-waiting-card" style={{ textAlign: "center", padding: "36px 24px" }}>
-            <AlertTriangle size={48} color="#C8102E" className="pulse-glow" style={{ marginBottom: 14 }} />
-            <h2 className="heist-waiting-title" style={{ color: "#C8102E", fontSize: 22, letterSpacing: 2 }}>CHANNEL ENCRYPTED</h2>
-            <p className="heist-waiting-text" style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-secondary)", margin: "14px 0 20px" }}>
-              THE PROFESSOR HAS NOT STARTED THE GAME PROTOCOL YET. MAINTAIN POSITION AND STAND BY FOR THE SIGNAL FROM THE ADMIN...
-            </p>
-            <p className="heist-badge" style={{ marginBottom: 20 }}>OPERATIVE: {activeTeamDisplayName}</p>
-            <button className="heist-btn" onClick={handleLogout} style={{ width: "100%" }}>
-              <LogOut size={14} /> DISCONNECT
-            </button>
-          </div>
-        </div>
-      </HeistLayout>
-    );
-  }
+
 
   // ── Game paused (Global or Individual) ───────────────────
   if (gameSettings.isPaused || teamData?.isPaused) {
