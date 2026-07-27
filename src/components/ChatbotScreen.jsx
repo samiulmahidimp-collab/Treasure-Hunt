@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
-import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, ExternalLink } from "lucide-react";
+import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import QRScannerModal from "./QRScannerModal";
@@ -58,11 +58,11 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     };
   }, []);
 
-  // Sync Admin Resolution of Help Alert
+  // Sync Admin Resolution of Help Alert in real time
   useEffect(() => {
     if (prevNeedsHelpRef.current && !safeTeamData.needsHelp) {
-      setAlertNotice("✅ ADMIN RESOLVED YOUR ALERT: Assistance acknowledged!");
-      setTimeout(() => setAlertNotice(""), 5000);
+      setAlertNotice("✅ ALERT RESOLVED BY ADMIN! You may proceed with your mission.");
+      setTimeout(() => setAlertNotice(""), 4500);
 
       setMessages((prev) => {
         const resolveMsg = {
@@ -79,13 +79,15 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     prevNeedsHelpRef.current = safeTeamData.needsHelp;
   }, [safeTeamData.needsHelp, effectiveTeamId, storageKey]);
 
-  // Anti-collision clue selector with Stage gating
-  const getNextClue = async (solvedList) => {
-    const allTeams = await dbService.getAllTeams();
-    const activeClueIds = Object.values(allTeams)
-      .map(t => t?.currentClueId)
-      .filter(Boolean);
+  // Anti-collision clue selector with Stage gating & Strict No-Duplicate Shuffle Enforcement
+  const getNextClue = async (solvedList = []) => {
+    const solvedSet = new Set(solvedList || []);
 
+    // 1. Strictly filter out any clue already solved by this team in this game
+    const unsolvedClues = CLUES.filter(c => !solvedSet.has(c.id));
+    if (unsolvedClues.length === 0) return null;
+
+    // 2. Determine target stage based on progress
     let targetStage = 1;
     if (solvedList.length >= 10) {
       targetStage = 3;
@@ -93,23 +95,34 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
       targetStage = 2;
     }
 
-    const stagePool = CLUES.filter(c => (c.stage || 1) === targetStage);
-    const candidates = stagePool.filter(
-      c => !solvedList.includes(c.id) && !activeClueIds.includes(c.id)
-    );
-    const fallback = stagePool.filter(c => !solvedList.includes(c.id));
-    const pool = candidates.length > 0 ? candidates : fallback;
+    // 3. Filter unsolved clues by stage
+    const stageUnsolved = unsolvedClues.filter(c => (c.stage || 1) === targetStage);
+    const poolToUse = stageUnsolved.length > 0 ? stageUnsolved : unsolvedClues;
 
-    if (pool.length === 0) return CLUES[0];
-    return pool[Math.floor(Math.random() * pool.length)];
+    // 4. Exclude clues currently active on opponent teams to minimize collisions
+    const allTeams = await dbService.getAllTeams();
+    const activeOpponentClueIds = Object.values(allTeams)
+      .map(t => t?.currentClueId)
+      .filter(Boolean);
+
+    const nonCollidingPool = poolToUse.filter(c => !activeOpponentClueIds.includes(c.id));
+    const finalPool = nonCollidingPool.length > 0 ? nonCollidingPool : poolToUse;
+
+    // 5. Pick a random, shuffled clue from eligible unsolved pool
+    const randomIndex = Math.floor(Math.random() * finalPool.length);
+    return finalPool[randomIndex];
   };
 
-  // Immediate default active clue so clue panel renders instantly on frame 1
+  // Immediate default active clue so clue panel renders instantly on frame 1 without repeating solved clues
   let activeClue = CLUES.find(c => c.id === safeTeamData.currentClueId);
   if (!activeClue && !isAllComplete) {
-    const stage1Clues = CLUES.filter(c => (c.stage || 1) === 1);
-    const unsolvedStage1 = stage1Clues.filter(c => !(safeTeamData.solvedClues || []).includes(c.id));
-    activeClue = unsolvedStage1.length > 0 ? unsolvedStage1[0] : CLUES[0];
+    const solvedSet = new Set(safeTeamData.solvedClues || []);
+    const stage1Unsolved = CLUES.filter(c => (c.stage || 1) === 1 && !solvedSet.has(c.id));
+    const anyUnsolved = CLUES.filter(c => !solvedSet.has(c.id));
+    const candidatePool = stage1Unsolved.length > 0 ? stage1Unsolved : anyUnsolved;
+    if (candidatePool.length > 0) {
+      activeClue = candidatePool[Math.floor(Math.random() * candidatePool.length)];
+    }
   }
 
   // Instant message state initialization
@@ -169,19 +182,26 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Alert Admin SOS
+  // Alert Admin SOS Toggle
   const handleAlertAdmin = async () => {
-    await dbService.updateTeam(effectiveTeamId, { needsHelp: true, helpRequestedAt: Date.now() });
-    setAlertNotice("ADMIN ALERT TRANSMITTED! Operative assistance requested.");
-    setTimeout(() => setAlertNotice(""), 4500);
+    const nextState = !safeTeamData.needsHelp;
+    await dbService.updateTeam(effectiveTeamId, { needsHelp: nextState, helpRequestedAt: Date.now() });
 
-    const alertMsg = {
-      sender: "professor",
-      text: `🚨 ADMIN SOS ALERT SENT: The Professor has been notified that Team ${teamName.toUpperCase()} requires assistance. An operative is being dispatched.`,
-      type: "error"
-    };
-    const updated = [...messages, alertMsg];
-    updateMessagesAndSync(updated);
+    if (nextState) {
+      setAlertNotice("ADMIN ALERT TRANSMITTED! Operative assistance requested.");
+      setTimeout(() => setAlertNotice(""), 4500);
+
+      const alertMsg = {
+        sender: "professor",
+        text: `🚨 ADMIN SOS ALERT SENT: The Professor has been notified that Team ${teamName.toUpperCase()} requires assistance. An operative is being dispatched.`,
+        type: "error"
+      };
+      const updated = [...messages, alertMsg];
+      updateMessagesAndSync(updated);
+    } else {
+      setAlertNotice("ADMIN ALERT CANCELLED.");
+      setTimeout(() => setAlertNotice(""), 3000);
+    }
   };
 
   // Smart QR Code Scanner Handler
@@ -212,7 +232,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
           setAlertNotice(`🌐 QR LINK OPENED IN NEW TAB! Extracted code parameter: "${finalCode}"`);
         } else {
           finalCode = raw;
-          setAlertNotice(`🌐 QR LINK OPENED IN NEW TAB! Scanned link auto-filled. Inspect the open tab for your clue!`);
+          setAlertNotice(`🌐 QR LINK OPENED IN NEW TAB! Scanned link auto-filled. Inspect open tab for clue!`);
         }
       } catch (e) {
         finalCode = raw;
