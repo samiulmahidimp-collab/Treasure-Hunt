@@ -913,7 +913,7 @@ select.heist-input option { background: #0e0a0a; color: var(--text-primary); }
 }
 
 /* ═══════════════════════════════════════════════════════
-   ANIMATIONS
+   ANIMATIONS & RESPONSIVE MEDIA QUERIES
    ═══════════════════════════════════════════════════════ */
 @keyframes pulse {
   0%   { box-shadow: 0 0 6px rgba(200,16,46,0.15); }
@@ -931,3 +931,111 @@ select.heist-input option { background: #0e0a0a; color: var(--text-primary); }
 .spin-animation       { transform-origin: center; animation: spin 16s linear infinite; }
 .spin-reverse-animation { transform-origin: center; animation: spin 24s linear infinite reverse; }
 .blink-text           { animation: blink 1s infinite; }
+
+/* ── Mobile Layout Fixes ───────────────────────────── */
+@media (max-width: 768px) {
+  .chat-root {
+    height: 100dvh;
+  }
+  
+  .chat-body {
+    padding: 10px;
+    gap: 10px;
+    height: calc(100dvh - 56px);
+  }
+
+  .clue-panel {
+    padding: 10px 12px;
+    gap: 8px;
+    flex-shrink: 0;
+    max-height: 220px;
+  }
+
+  .clue-header-title {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  .clue-attempts {
+    font-size: 9px;
+  }
+
+  .clue-body {
+    gap: 10px;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .clue-img-wrap {
+    flex: 0 0 110px;
+    max-width: 110px;
+    min-height: 80px;
+    max-height: 100px;
+  }
+
+  .clue-img-wrap img {
+    max-height: 100px;
+    object-fit: contain;
+  }
+
+  .clue-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .clue-desc {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .clue-hint {
+    font-size: 9px;
+    margin-top: 4px;
+  }
+
+  .chat-messages {
+    gap: 10px;
+    padding-right: 2px;
+  }
+
+  .chat-bubble {
+    max-width: 90%;
+    padding: 10px 12px;
+  }
+
+  .chat-text {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .chat-input-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+    padding: 4px 8px 4px 10px;
+    gap: 6px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.8);
+    flex-shrink: 0;
+  }
+
+  .chat-input-field {
+    font-size: 12px;
+    padding: 8px 0;
+    letter-spacing: 1px;
+  }
+
+  .heist-header {
+    padding: 10px 14px;
+  }
+
+  .heist-header-logo {
+    font-size: 14px;
+    letter-spacing: 1.5px;
+  }
+
+  .heist-badge {
+    font-size: 9px;
+    padding: 4px 8px;
+  }
+}
+

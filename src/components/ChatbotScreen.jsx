@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
-import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X } from "lucide-react";
+import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
-import { DeTag } from "./HeistUI";
+import QRScannerModal from "./QRScannerModal";
 
 export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) {
   const effectiveTeamId = teamId || teamData?.id || teamName;
@@ -19,7 +19,8 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     currentClueId: null,
     attempts: 0,
     locked: false,
-    isPaused: false
+    isPaused: false,
+    needsHelp: false
   };
 
   const solvedCount     = safeTeamData.solvedClues ? safeTeamData.solvedClues.length : 0;
@@ -72,14 +73,16 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     return [{
       sender: "professor",
       text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Analyze the visual clue above and enter the decryption key to proceed.`,
-      type: "welcome",
-      clue: activeClue
+      type: "welcome"
     }];
   });
 
   const [inputVal, setInputVal] = useState("");
   const [showSuccessIndicator, setShowSuccessIndicator] = useState(false);
   const [zoomImage, setZoomImage] = useState(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [isClueCollapsed, setIsClueCollapsed] = useState(false);
+  const [alertNotice, setAlertNotice] = useState("");
   const messagesEndRef = useRef(null);
 
   // Sync server chat messages if available
@@ -114,6 +117,32 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Alert Admin SOS
+  const handleAlertAdmin = async () => {
+    await dbService.updateTeam(effectiveTeamId, { needsHelp: true, helpRequestedAt: Date.now() });
+    setAlertNotice("ADMIN ALERT TRANSMITTED! Operative assistance requested.");
+    setTimeout(() => setAlertNotice(""), 4500);
+
+    const alertMsg = {
+      sender: "professor",
+      text: `🚨 ADMIN SOS ALERT SENT: The Professor has been notified that Team ${teamName.toUpperCase()} requires assistance. An operative is being dispatched.`,
+      type: "error"
+    };
+    const updated = [...messages, alertMsg];
+    updateMessagesAndSync(updated);
+  };
+
+  // Handle QR Code Scanner Callback
+  const handleQRScanned = (scannedText) => {
+    setShowQRScanner(false);
+    if (scannedText) {
+      const cleanVal = scannedText.trim();
+      setInputVal(cleanVal);
+      setAlertNotice(`QR CODE CAPTURED: "${cleanVal}". Press Send to submit!`);
+      setTimeout(() => setAlertNotice(""), 4000);
+    }
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -189,8 +218,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
 
             const nextClueMsg = {
               sender: "professor",
-              text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`,
-              clue: nextClue,
+              text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`
             };
             setMessages(prev => {
               const updated = [...prev, nextClueMsg];
@@ -210,7 +238,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
         await dbService.updateTeam(effectiveTeamId, { attempts: nextAttempts, locked: true });
         currentMsgList = [...currentMsgList, {
           sender: "professor",
-          text: `WRONG ANSWER: "${userText}". 3 failed attempts reached. System locked. Request Professor override to unlock.`,
+          text: `WRONG ANSWER: "${userText}". 3 consecutive failed attempts reached! System locked. Enter Admin Access Code to unlock and resume.`,
           type: "error",
         }];
         updateMessagesAndSync(currentMsgList);
@@ -230,7 +258,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     await dbService.updateTeam(effectiveTeamId, { attempts: 0, locked: false });
     const overrideMsgList = [...messages, {
       sender: "professor",
-      text: "SYSTEM OVERRIDE SUCCESSFUL. Access granted. You have 3 fresh attempts to solve the clue.",
+      text: "ADMIN OVERRIDE SUCCESSFUL. Access restored. You have 3 fresh attempts for your active clue.",
     }];
     updateMessagesAndSync(overrideMsgList);
   };
@@ -252,24 +280,59 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
 
         {/* Header */}
         <header className="heist-header">
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className="pulse-dot" />
             <div>
-              <div className="heist-header-logo" style={{ fontSize: 16 }}>
+              <div className="heist-header-logo" style={{ fontSize: 15 }}>
                 SECURE NETWORK LINK
               </div>
-              <p className="heist-subtitle" style={{ fontSize: 9, marginTop: 2 }}>
+              <p className="heist-subtitle" style={{ fontSize: 9, marginTop: 1 }}>
                 OPERATIVE: {teamName.toUpperCase()}
               </p>
             </div>
           </div>
+
           <div className="heist-header-actions">
             <div className="heist-badge">PROGRESS: <strong>{solvedCount} / {TOTAL_CLUES_COUNT}</strong></div>
-            <button className="heist-btn" style={{ padding: "7px 14px", fontSize: 12 }} onClick={onLogout}>
+            
+            {/* ALERT ADMIN BUTTON */}
+            <button
+              className="heist-btn"
+              style={{
+                padding: "6px 12px",
+                fontSize: 11,
+                borderColor: safeTeamData.needsHelp ? "#ef4444" : "rgba(239, 68, 68, 0.5)",
+                color: "#ef4444",
+                background: safeTeamData.needsHelp ? "rgba(239, 68, 68, 0.25)" : "rgba(239, 68, 68, 0.08)"
+              }}
+              onClick={handleAlertAdmin}
+              title="Alert Admin for immediate assistance"
+            >
+              <AlertTriangle size={13} color="#ef4444" />
+              <span>{safeTeamData.needsHelp ? "ADMIN ALERTED" : "ALERT ADMIN"}</span>
+            </button>
+
+            <button className="heist-btn" style={{ padding: "6px 12px", fontSize: 11 }} onClick={onLogout}>
               <LogOut size={13} /> DISCONNECT
             </button>
           </div>
         </header>
+
+        {/* Alert Notification Bar */}
+        {alertNotice && (
+          <div style={{
+            background: "rgba(200, 16, 46, 0.9)",
+            color: "#fff",
+            textAlign: "center",
+            padding: "8px 16px",
+            fontSize: 12,
+            fontFamily: "var(--font-mono)",
+            letterSpacing: 1,
+            zIndex: 90
+          }}>
+            {alertNotice}
+          </div>
+        )}
 
         {/* Chat body */}
         <div className="chat-body">
@@ -299,7 +362,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
             </div>
           ) : (
             <>
-              {/* Clue panel */}
+              {/* Active Clue Intelligence panel */}
               {activeClue && (
                 <div className="clue-panel">
                   <div className="clue-header">
@@ -307,33 +370,47 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                       <HelpCircle size={15} color="#C8102E" />
                       <span className="clue-header-title">ACTIVE CLUE INTELLIGENCE</span>
                     </div>
-                    <span className="clue-attempts">ATTEMPTS: {currentAttempts} / 3</span>
-                  </div>
-                  <div className="clue-body">
-                    <div
-                      className="clue-img-wrap"
-                      onClick={() => setZoomImage({ src: activeClue.image, filename: activeClue.answer })}
-                      title="Click to Zoom & Download"
-                    >
-                      <img
-                        src={activeClue.image}
-                        alt="Clue Visual"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = "https://placehold.co/600x400/0D0D0D/C8102E?text=PICTURE+NOT+LOADED";
-                        }}
-                      />
-                      <div className="clue-zoom-icon"><ZoomIn size={14} color="#fff" /></div>
-                    </div>
-                    <div className="clue-info">
-                      <p className="clue-desc">{activeClue.description}</p>
-                      <p className="clue-hint">Tip: Click the image to view fullscreen or download. Enter the code below.</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span className="clue-attempts">ATTEMPTS: {currentAttempts} / 3</span>
+                      <button
+                        type="button"
+                        className="heist-btn"
+                        style={{ padding: "2px 8px", fontSize: 10, display: "inline-flex", alignItems: "center", gap: 4 }}
+                        onClick={() => setIsClueCollapsed(!isClueCollapsed)}
+                      >
+                        {isClueCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                        <span>{isClueCollapsed ? "EXPAND" : "MINIMIZE"}</span>
+                      </button>
                     </div>
                   </div>
+
+                  {!isClueCollapsed && (
+                    <div className="clue-body">
+                      <div
+                        className="clue-img-wrap"
+                        onClick={() => setZoomImage({ src: activeClue.image, filename: activeClue.answer })}
+                        title="Click to Zoom & Download"
+                      >
+                        <img
+                          src={activeClue.image}
+                          alt="Active Clue Visual"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://placehold.co/600x400/0D0D0D/C8102E?text=PICTURE+NOT+LOADED";
+                          }}
+                        />
+                        <div className="clue-zoom-icon"><ZoomIn size={14} color="#fff" /></div>
+                      </div>
+                      <div className="clue-info">
+                        <p className="clue-desc">{activeClue.description}</p>
+                        <p className="clue-hint">Tip: Tap image to view full view. Enter answer or scan QR code below.</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Messages */}
+              {/* Chat Messages Stream */}
               <div className="chat-messages">
                 {messages.map((msg, i) => {
                   let bubbleClass = "chat-bubble ";
@@ -345,6 +422,12 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                     bubbleClass += "chat-bubble-player";
                   }
 
+                  // Hide old/solved clue images inside past chat bubbles so chat stays clean
+                  const showClueMedia =
+                    msg.clue &&
+                    msg.clue.id === activeClue?.id &&
+                    !(safeTeamData.solvedClues || []).includes(msg.clue.id);
+
                   return (
                     <div key={i} style={{ display: "flex", justifyContent: msg.sender === "professor" ? "flex-start" : "flex-end" }}>
                       <div className={bubbleClass}>
@@ -352,9 +435,10 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                           {msg.sender === "professor" ? "THE PROFESSOR" : "OPERATIVE"}
                         </span>
                         <p className="chat-text">{msg.text}</p>
-                        {msg.clue && (
+                        
+                        {showClueMedia && (
                           <div
-                            style={{ marginTop: 10, maxWidth: 200, border: "1px solid var(--border-dim)", overflow: "hidden", cursor: "pointer", position: "relative" }}
+                            style={{ marginTop: 8, maxWidth: 180, border: "1px solid var(--border-dim)", overflow: "hidden", cursor: "pointer", position: "relative" }}
                             onClick={() => setZoomImage({ src: msg.clue.image, filename: msg.clue.answer })}
                           >
                             <img
@@ -373,7 +457,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input bar */}
+              {/* Chat Input & Action Bar */}
               <form onSubmit={handleSend} className="chat-input-bar">
                 <span className="chat-cmd-prefix">$</span>
                 <input
@@ -381,15 +465,28 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                   className="chat-input-field"
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
-                  placeholder={activeClue ? "TYPE DECRYPTION KEY..." : "RESPOND TO THE PROFESSOR..."}
+                  placeholder={activeClue ? "TYPE DECRYPTION KEY OR SCAN QR..." : "RESPOND TO THE PROFESSOR..."}
                   disabled={isLocked || isAllComplete}
                   autoComplete="off"
                 />
+
+                {/* QR Code Camera Scanner Trigger Button */}
+                <button
+                  type="button"
+                  className="heist-btn"
+                  style={{ padding: "8px 12px", borderColor: "var(--border-red)" }}
+                  onClick={() => setShowQRScanner(true)}
+                  title="Scan QR Code using Camera"
+                  disabled={isLocked || isAllComplete}
+                >
+                  <Camera size={16} color="#C8102E" />
+                </button>
+
                 <button
                   type="submit"
                   className="heist-btn-solid"
-                  style={{ padding: "10px 16px" }}
-                  disabled={isLocked || isAllComplete}
+                  style={{ padding: "8px 16px" }}
+                  disabled={isLocked || isAllComplete || !inputVal.trim()}
                 >
                   <Send size={15} />
                 </button>
@@ -398,7 +495,15 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
           )}
         </div>
 
-        {/* Lightbox */}
+        {/* QR Code Scanner Modal */}
+        {showQRScanner && (
+          <QRScannerModal
+            onScanSuccess={handleQRScanned}
+            onClose={() => setShowQRScanner(false)}
+          />
+        )}
+
+        {/* Lightbox / Zoom Modal */}
         {zoomImage && (
           <div className="zoom-modal" onClick={() => setZoomImage(null)}>
             <div className="zoom-content" onClick={(e) => e.stopPropagation()}>

@@ -89,6 +89,13 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
 
                 {/* STATUS */}
                 <td>
+                  {data.needsHelp && (
+                    <div style={{ marginBottom: 6 }}>
+                      <span className="status-pill" style={{ background: "rgba(239, 68, 68, 0.2)", borderColor: "#ef4444", color: "#ef4444", animation: "blink 1s infinite", gap: 4 }}>
+                        <ShieldAlert size={12} /> 🚨 SOS HELP NEEDED
+                      </span>
+                    </div>
+                  )}
                   {data.locked ? (
                     <span className="status-pill status-paused" style={{ gap: 5, background: "rgba(200, 16, 46, 0.15)", borderColor: "#C8102E", color: "#C8102E" }}>
                       <ShieldAlert size={11} /> LOCKED
@@ -115,7 +122,26 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
                 {/* ADMIN CONTROLS FOR INDIVIDUAL TEAM */}
                 {onTogglePauseTeam && (
                   <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      {data.needsHelp && (
+                        <button
+                          className="heist-btn-solid"
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: 11,
+                            background: "#ef4444",
+                            borderColor: "#ef4444",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4
+                          }}
+                          onClick={() => dbService.updateTeam(t.id, { needsHelp: false })}
+                        >
+                          <CheckCircle size={12} />
+                          <span>RESOLVE HELP</span>
+                        </button>
+                      )}
+
                       <button
                         className="heist-btn"
                         style={{
