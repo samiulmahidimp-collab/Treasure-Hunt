@@ -345,6 +345,14 @@ export const dbService = {
     const defaultSettings = { isStarted: false, isPaused: false };
     const defaultTeams = generateDefaultTeams();
 
+    // Clear all local chat histories from browser localStorage
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith("heist_chat_")) {
+        localStorage.removeItem(key);
+      }
+    });
+    window.dispatchEvent(new Event("heist-game-reset"));
+
     if (!useMock) {
       const settingsRef = doc(db, "game_settings", "settings");
       const teamsRef = doc(db, "game_settings", "teams_list");

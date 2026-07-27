@@ -125,6 +125,12 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     }
   }
 
+  const initialWelcomeMsg = [{
+    sender: "professor",
+    text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Analyze the visual clue above and enter the decryption key to proceed.`,
+    type: "welcome"
+  }];
+
   // Instant message state initialization
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(storageKey);
@@ -134,11 +140,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       } catch (e) {}
     }
-    return [{
-      sender: "professor",
-      text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Analyze the visual clue above and enter the decryption key to proceed.`,
-      type: "welcome"
-    }];
+    return initialWelcomeMsg;
   });
 
   const [inputVal, setInputVal] = useState("");
@@ -149,13 +151,36 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const [alertNotice, setAlertNotice] = useState("");
   const messagesEndRef = useRef(null);
 
-  // Sync server chat messages if available
+  // Listen for global game reset event
   useEffect(() => {
-    if (teamData?.chatMessages && Array.isArray(teamData.chatMessages) && teamData.chatMessages.length > 0) {
-      setMessages(teamData.chatMessages);
-      localStorage.setItem(storageKey, JSON.stringify(teamData.chatMessages));
+    const handleReset = () => {
+      localStorage.removeItem(storageKey);
+      setMessages(initialWelcomeMsg);
+    };
+
+    window.addEventListener("heist-game-reset", handleReset);
+    return () => window.removeEventListener("heist-game-reset", handleReset);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey]);
+
+  // Sync server chat messages if available or clear if game reset
+  useEffect(() => {
+    if (teamData) {
+      const isTeamReset =
+        (!teamData.solvedClues || teamData.solvedClues.length === 0) &&
+        (!teamData.chatMessages || teamData.chatMessages.length === 0) &&
+        (teamData.score === 0);
+
+      if (isTeamReset) {
+        localStorage.removeItem(storageKey);
+        setMessages(initialWelcomeMsg);
+      } else if (Array.isArray(teamData.chatMessages) && teamData.chatMessages.length > 0) {
+        setMessages(teamData.chatMessages);
+        localStorage.setItem(storageKey, JSON.stringify(teamData.chatMessages));
+      }
     }
-  }, [teamData?.chatMessages, storageKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamData, storageKey]);
 
   // Save chat thread to localStorage & sync to DB
   const updateMessagesAndSync = (newMessages) => {
