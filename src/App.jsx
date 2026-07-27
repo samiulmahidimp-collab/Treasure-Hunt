@@ -8,11 +8,9 @@
  *
  * The HeistLayout (mask background) is applied inside each screen component,
  * so the background image is always visible regardless of state.
- *
- * Auth fix: onSelectRole fires → role state updates → React immediately
- * renders the target portal. No race condition, no bounce-back to login.
  */
 import React, { useState } from "react";
+import { Analytics } from "@vercel/analytics/react";
 import LandingPage from "./components/LandingPage";
 import AdminPortal from "./components/AdminPortal";
 import PlayerPortal from "./components/PlayerPortal";
@@ -22,9 +20,10 @@ export default function App() {
 
   return (
     <>
-      {role === null   && <LandingPage onSelectRole={setRole} />}
+      {role === null     && <LandingPage onSelectRole={setRole} />}
       {role === "player" && <PlayerPortal onBack={() => setRole(null)} />}
       {role === "admin"  && <AdminPortal  onBack={() => setRole(null)} />}
+      <Analytics />
     </>
   );
 }
