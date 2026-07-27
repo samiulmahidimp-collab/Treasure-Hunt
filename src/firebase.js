@@ -230,6 +230,19 @@ export const dbService = {
     }
   },
 
+  // Get a one-time snapshot of ALL teams (used for anti-collision clue picking)
+  getAllTeams: async () => {
+    if (!useMock) {
+      const docRef = doc(db, "game_settings", "teams_list");
+      const snap = await getDoc(docRef);
+      return snap.exists() ? snap.data() : {};
+    } else {
+      // Synchronous read directly from localStorage — no subscription needed
+      const state = getMockDB();
+      return state.teams || {};
+    }
+  },
+
   // Admin resets the whole game state
   resetGame: async () => {
     const defaultSettings = { isStarted: false, isPaused: false };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
-import { CLUES } from "../clues";
+import { CLUES, CLUES_PER_ROUND } from "../clues";
 import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
@@ -52,12 +52,28 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
   const solvedCount     = teamData.solvedClues ? teamData.solvedClues.length : 0;
   const isLocked        = teamData.locked || false;
   const currentAttempts = teamData.attempts || 0;
-  const isPhase1Complete = solvedCount >= CLUES.length;
+  const isPhase1Complete = solvedCount >= CLUES_PER_ROUND;
 
-  const getNextClue = (solvedList) => {
-    const remaining = CLUES.filter(c => !solvedList.includes(c.id));
-    if (!remaining.length) return null;
-    return remaining[Math.floor(Math.random() * remaining.length)];
+  // Anti-collision clue selector:
+  // Reads ALL teams from DB in one shot, collects their currentClueId values,
+  // and avoids assigning a clue that another team is currently solving.
+  const getNextClue = async (solvedList) => {
+    const allTeams = await dbService.getAllTeams();
+    const activeClueIds = Object.values(allTeams)
+      .map(t => t.currentClueId)
+      .filter(Boolean);
+
+    // Prefer clues not solved by this team AND not active on any other team
+    const candidates = CLUES.filter(
+      c => !solvedList.includes(c.id) && !activeClueIds.includes(c.id)
+    );
+
+    // Fallback: if all remaining unsolved clues are in use by others, pick any unsolved one
+    const fallback = CLUES.filter(c => !solvedList.includes(c.id));
+    const pool = candidates.length > 0 ? candidates : fallback;
+
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
   };
 
   const handleSend = async (e) => {
@@ -77,7 +93,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
           sender: "professor",
           text: "Excellent. Remember, there is no turning back now. Initializing decoy signals. Clue 1 incoming...",
         }]);
-        const firstClue = getNextClue([]);
+        const firstClue = await getNextClue([]);
         if (firstClue) {
           await dbService.updateTeam(teamName, { currentClueId: firstClue.id, attempts: 0, locked: false });
           setTimeout(() => {
@@ -113,17 +129,17 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
 
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: `CORRECT CODE CRACKED! Great job, team. Solved: ${newSolvedCount} / ${CLUES.length}.`,
+          text: `CORRECT CODE CRACKED! Great job, team. Solved: ${newSolvedCount} / ${CLUES_PER_ROUND}.`,
           type: "success",
         }]);
 
-        if (newSolvedCount >= CLUES.length) {
+        if (newSolvedCount >= CLUES_PER_ROUND) {
           await dbService.updateTeam(teamName, {
             score: newSolvedCount, solvedClues: newSolvedClues,
             currentClueId: null, attempts: 0, locked: false,
           });
         } else {
-          const nextClue = getNextClue(newSolvedClues);
+          const nextClue = await getNextClue(newSolvedClues);
           if (nextClue) {
             await dbService.updateTeam(teamName, {
               score: newSolvedCount, solvedClues: newSolvedClues,
@@ -203,7 +219,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
             </div>
           </div>
           <div className="heist-header-actions">
-            <div className="heist-badge">CRACKED: {solvedCount} / {CLUES.length}</div>
+            <div className="heist-badge">CRACKED: <strong>{solvedCount} / {CLUES_PER_ROUND}</strong></div>
             <button className="heist-btn" style={{ padding: "7px 14px", fontSize: 12 }} onClick={onLogout}>
               <LogOut size={13} /> DISCONNECT
             </button>
@@ -232,7 +248,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
                 </p>
                 <div style={{ height: 1, background: "rgba(34,197,94,0.2)", width: "80%", margin: "0 auto 20px" }} />
                 <p className="heist-subtitle" style={{ lineHeight: 1.7, color: "var(--text-muted)" }}>
-                  You have successfully decrypted all {CLUES.length} core vaults. Stay tuned on this secure terminal. Do not disconnect.
+                  You have successfully decrypted all {CLUES_PER_ROUND} core vaults. Stay tuned on this secure terminal channel. Do not disconnect your comms link.
                 </p>
               </div>
             </div>

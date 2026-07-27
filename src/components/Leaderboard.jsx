@@ -1,6 +1,6 @@
 import React from "react";
 import { CheckCircle, ShieldAlert } from "lucide-react";
-import { CLUES } from "../clues";
+import { CLUES, CLUES_PER_ROUND } from "../clues";
 
 export default function Leaderboard({ teams }) {
   const teamNames = ["mahid", "oyshee", "prizon"];
@@ -31,7 +31,7 @@ export default function Leaderboard({ teams }) {
                 <td>
                   <div className="score-badge">
                     <CheckCircle size={13} color="var(--green-ok)" />
-                    <span>{solvedCount} / {CLUES.length}</span>
+                    <span>{solvedCount} / {CLUES_PER_ROUND}</span>
                   </div>
                 </td>
                 <td>
@@ -53,7 +53,7 @@ export default function Leaderboard({ teams }) {
                     <span className="status-pill status-paused" style={{ gap: 5 }}>
                       <ShieldAlert size={11} /> LOCKED
                     </span>
-                  ) : solvedCount >= CLUES.length ? (
+                  ) : solvedCount >= CLUES_PER_ROUND ? (
                     <span className="status-pill status-running">PHASE 1 COMPLETE</span>
                   ) : (
                     <span className="status-pill" style={{ color: "#60a5fa", borderColor: "rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.06)" }}>
