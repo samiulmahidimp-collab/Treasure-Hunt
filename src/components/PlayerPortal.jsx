@@ -68,6 +68,13 @@ export default function PlayerPortal({ onBack }) {
 
     const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
+    // Write to localStorage and React state BEFORE updating DB to avoid subscription token race conditions
+    localStorage.setItem("heist_team", teamObj.id);
+    localStorage.setItem("heist_session_token", token);
+
+    setSessionToken(token);
+    setActiveTeam(teamObj.id);
+
     await dbService.updateTeam(teamObj.id, {
       name: teamObj.name,
       sessionToken: token,
@@ -77,12 +84,6 @@ export default function PlayerPortal({ onBack }) {
       locked: teamData?.locked || false,
     });
 
-    // Write to localStorage BEFORE updating state to avoid false kick-outs
-    localStorage.setItem("heist_team", teamObj.id);
-    localStorage.setItem("heist_session_token", token);
-
-    setSessionToken(token);
-    setActiveTeam(teamObj.id);
     setIsSubmitting(false);
   };
 

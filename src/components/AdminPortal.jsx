@@ -9,7 +9,9 @@ import { CLUES, TOTAL_CLUES_COUNT, updateCluesList } from "../clues";
 export default function AdminPortal({ onBack }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem("admin_authenticated") === "true";
+  });
   const [error, setError] = useState("");
   const [gameSettings, setGameSettings] = useState({ isStarted: false, isPaused: false });
   const [teams, setTeams] = useState({});
@@ -28,6 +30,7 @@ export default function AdminPortal({ onBack }) {
   const handleLogin = (e) => {
     e.preventDefault();
     if (username === "jonogoner_raja_mahid_bro" && password === "ami_mahid") {
+      sessionStorage.setItem("admin_authenticated", "true");
       setIsAuthenticated(true);
       setError("");
     } else {
@@ -169,7 +172,12 @@ export default function AdminPortal({ onBack }) {
           <button
             className="heist-btn"
             style={{ padding: "8px 16px", fontSize: 13 }}
-            onClick={() => setIsAuthenticated(false)}
+            onClick={() => {
+              sessionStorage.removeItem("admin_authenticated");
+              localStorage.removeItem("heist_role");
+              setIsAuthenticated(false);
+              onBack();
+            }}
           >
             <LogOut size={14} /> DISCONNECT
           </button>

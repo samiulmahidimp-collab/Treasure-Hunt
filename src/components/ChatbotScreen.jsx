@@ -16,9 +16,12 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const effectiveTeamId = teamId || teamData?.id || teamName;
   const storageKey = `heist_chat_${effectiveTeamId}`;
 
+  const hasInitializedRef = useRef(false);
+
   // ── Restore Chat Thread from DB or localStorage on mount ───
   useEffect(() => {
-    if (!teamData) return;
+    if (!teamData || hasInitializedRef.current) return;
+    hasInitializedRef.current = true;
 
     // 1. Prefer chat history from server DB if available
     if (teamData.chatMessages && Array.isArray(teamData.chatMessages) && teamData.chatMessages.length > 0) {
@@ -65,6 +68,19 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     localStorage.setItem(storageKey, JSON.stringify(newMessages));
     dbService.updateTeam(effectiveTeamId, { chatMessages: newMessages });
   };
+
+  // ── Auto-assign clue if missing ───────────────────────────
+  useEffect(() => {
+    if (!teamData || isLocked || isAllComplete || teamData.currentClueId) return;
+
+    const autoAssign = async () => {
+      const firstClue = await getNextClue(teamData.solvedClues || []);
+      if (firstClue) {
+        await dbService.updateTeam(effectiveTeamId, { currentClueId: firstClue.id, attempts: 0, locked: false });
+      }
+    };
+    autoAssign();
+  }, [teamData?.currentClueId, isLocked, isAllComplete, effectiveTeamId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
