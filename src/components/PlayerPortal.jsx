@@ -39,11 +39,12 @@ export default function PlayerPortal({ onBack }) {
   useEffect(() => {
     if (!activeTeam) return;
     const unsub = dbService.subscribeTeam(activeTeam, (data) => {
+      if (!data) return;
       setTeamData(data);
       const activeLocalToken = localStorage.getItem("heist_session_token");
-      if (data?.sessionToken && activeLocalToken && data.sessionToken !== activeLocalToken) {
+      if (data.sessionToken && activeLocalToken && data.sessionToken !== activeLocalToken) {
         handleLogout();
-        alert("SESSION TERMINATED: Your team account logged in on another device/tab.");
+        setLoginError("SESSION DISCONNECTED: Your team account logged in on another device.");
       }
     });
     return () => unsub();
@@ -75,23 +76,27 @@ export default function PlayerPortal({ onBack }) {
       const allTeamsData = await dbService.getAllTeams();
       const existingTeam = allTeamsData[teamObj.id] || {};
 
-      // 2. Update DB with new sessionToken FIRST so previous login is terminated cleanly
+      // Guarantee clue ID is preserved, defaulting to clue_1
+      const preservedClueId = existingTeam.currentClueId || "clue_1";
+
+      // 2. Set LocalStorage & state BEFORE DB update so our own device token matches
+      localStorage.setItem("heist_team", teamObj.id);
+      localStorage.setItem("heist_session_token", newToken);
+      setSessionToken(newToken);
+
+      // 3. Update DB with new sessionToken & preserved clue ID
       await dbService.updateTeam(teamObj.id, {
         name: teamObj.name,
         sessionToken: newToken,
         score: existingTeam.score || 0,
         solvedClues: existingTeam.solvedClues || [],
-        currentClueId: existingTeam.currentClueId || null,
+        currentClueId: preservedClueId,
         attempts: existingTeam.attempts || 0,
         locked: existingTeam.locked || false,
         needsHelp: existingTeam.needsHelp || false,
       });
 
-      // 3. Save to localStorage & React state AFTER DB has been updated with newToken
-      localStorage.setItem("heist_team", teamObj.id);
-      localStorage.setItem("heist_session_token", newToken);
-
-      setSessionToken(newToken);
+      // 4. Activate team state to display portal
       setActiveTeam(teamObj.id);
     } catch (err) {
       console.error("Login update error:", err);

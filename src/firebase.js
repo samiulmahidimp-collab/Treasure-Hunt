@@ -19,7 +19,7 @@ export const generateDefaultTeams = () => {
       password: t.password,
       score: 0,
       solvedClues: [],
-      currentClueId: null,
+      currentClueId: "clue_1",
       chatMessages: [],
       sessionToken: "",
       attempts: 0,

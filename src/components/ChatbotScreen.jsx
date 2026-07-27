@@ -198,9 +198,14 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     if (isLocked || isAllComplete || safeTeamData.currentClueId) return;
 
     const autoAssign = async () => {
-      const firstClue = await getNextClue(safeTeamData.solvedClues || []);
-      if (firstClue) {
-        await dbService.updateTeam(effectiveTeamId, { currentClueId: firstClue.id, attempts: 0, locked: false });
+      const solvedSet = new Set(safeTeamData.solvedClues || []);
+      const unsolvedStage1 = CLUES.filter(c => (c.stage || 1) === 1 && !solvedSet.has(c.id));
+      const anyUnsolved = CLUES.filter(c => !solvedSet.has(c.id));
+      const pool = unsolvedStage1.length > 0 ? unsolvedStage1 : anyUnsolved;
+      const defaultTarget = pool.length > 0 ? pool[0] : CLUES[0];
+
+      if (defaultTarget) {
+        await dbService.updateTeam(effectiveTeamId, { currentClueId: defaultTarget.id, attempts: 0, locked: false });
       }
     };
     autoAssign();
