@@ -68,30 +68,37 @@ export default function PlayerPortal({ onBack }) {
 
     setIsSubmitting(true);
 
-    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    try {
+      const newToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-    // Write to localStorage and React state BEFORE updating DB to avoid subscription token race conditions
-    localStorage.setItem("heist_team", teamObj.id);
-    localStorage.setItem("heist_session_token", token);
+      // 1. Fetch current team data snapshot first
+      const allTeamsData = await dbService.getAllTeams();
+      const existingTeam = allTeamsData[teamObj.id] || {};
 
-    setSessionToken(token);
-    setActiveTeam(teamObj.id);
+      // 2. Update DB with new sessionToken FIRST so previous login is terminated cleanly
+      await dbService.updateTeam(teamObj.id, {
+        name: teamObj.name,
+        sessionToken: newToken,
+        score: existingTeam.score || 0,
+        solvedClues: existingTeam.solvedClues || [],
+        currentClueId: existingTeam.currentClueId || null,
+        attempts: existingTeam.attempts || 0,
+        locked: existingTeam.locked || false,
+        needsHelp: existingTeam.needsHelp || false,
+      });
 
-    const allTeamsData = await dbService.getAllTeams();
-    const existingTeam = allTeamsData[teamObj.id] || {};
+      // 3. Save to localStorage & React state AFTER DB has been updated with newToken
+      localStorage.setItem("heist_team", teamObj.id);
+      localStorage.setItem("heist_session_token", newToken);
 
-    await dbService.updateTeam(teamObj.id, {
-      name: teamObj.name,
-      sessionToken: token,
-      score: existingTeam.score || teamData?.score || 0,
-      solvedClues: existingTeam.solvedClues || teamData?.solvedClues || [],
-      currentClueId: existingTeam.currentClueId || teamData?.currentClueId || null,
-      attempts: existingTeam.attempts || teamData?.attempts || 0,
-      locked: existingTeam.locked || teamData?.locked || false,
-      needsHelp: existingTeam.needsHelp || teamData?.needsHelp || false,
-    });
-
-    setIsSubmitting(false);
+      setSessionToken(newToken);
+      setActiveTeam(teamObj.id);
+    } catch (err) {
+      console.error("Login update error:", err);
+      setLoginError("NETWORK ERROR DURING AUTHENTICATION. PLEASE RETRY.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleLogout = () => {
