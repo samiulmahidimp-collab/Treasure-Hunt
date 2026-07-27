@@ -11,7 +11,8 @@ export default function PlayerPortal({ onBack }) {
   const [passwordVal, setPasswordVal] = useState("");
   const [activeTeam, setActiveTeam] = useState("");
   const [sessionToken, setSessionToken] = useState("");
-  const [gameSettings, setGameSettings] = useState({ isStarted: false, isPaused: false });
+  const [gameSettings, setGameSettings] = useState({ isStarted: true, isPaused: false });
+  const [bypassedWaiting, setBypassedWaiting] = useState(false);
   const [teamData, setTeamData] = useState(null);
   const [loginError, setLoginError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -164,7 +165,7 @@ export default function PlayerPortal({ onBack }) {
   }
 
   // ── Game not started ────────────────────────────────────
-  if (!gameSettings.isStarted) {
+  if (!gameSettings.isStarted && !bypassedWaiting) {
     return (
       <HeistLayout>
         <div className="heist-waiting">
@@ -175,9 +176,14 @@ export default function PlayerPortal({ onBack }) {
               THE PROFESSOR HAS NOT STARTED THE PROTOCOL YET. STAND BY FOR THE SIGNAL...
             </p>
             <p className="heist-badge">OPERATIVE: {activeTeamDisplayName}</p>
-            <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>
-              <LogOut size={14} /> DISCONNECT
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", marginTop: 12 }}>
+              <button className="heist-btn-solid" onClick={() => setBypassedWaiting(true)} style={{ width: "100%" }}>
+                ENTER MISSION CHANNEL
+              </button>
+              <button className="heist-btn" onClick={handleLogout} style={{ width: "100%" }}>
+                <LogOut size={14} /> DISCONNECT
+              </button>
+            </div>
           </div>
         </div>
       </HeistLayout>

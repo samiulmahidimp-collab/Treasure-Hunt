@@ -86,23 +86,24 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, teamData]);
 
-  if (!teamData) {
-    return (
-      <HeistLayout>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-          <span className="heist-section-title blink-text">ESTABLISHING ENCRYPTED LINK...</span>
-        </div>
-      </HeistLayout>
-    );
-  }
+  const safeTeamData = teamData || {
+    id: effectiveTeamId,
+    name: teamName,
+    score: 0,
+    solvedClues: [],
+    currentClueId: null,
+    attempts: 0,
+    locked: false,
+    isPaused: false
+  };
 
-  const solvedCount     = teamData.solvedClues ? teamData.solvedClues.length : 0;
-  const isLocked        = teamData.locked || false;
-  const currentAttempts = teamData.attempts || 0;
+  const solvedCount     = safeTeamData.solvedClues ? safeTeamData.solvedClues.length : 0;
+  const isLocked        = safeTeamData.locked || false;
+  const currentAttempts = safeTeamData.attempts || 0;
   const isAllComplete   = solvedCount >= TOTAL_CLUES_COUNT;
 
   // Resolve active clue from DB
-  let activeClue = CLUES.find(c => c.id === teamData.currentClueId);
+  let activeClue = CLUES.find(c => c.id === safeTeamData.currentClueId);
 
   // Anti-collision clue selector with Stage gating (Stage 1: 8 clues, Stage 2: 2 clues, Final: 1 clue)
   const getNextClue = async (solvedList) => {
