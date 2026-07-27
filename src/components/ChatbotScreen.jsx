@@ -6,34 +6,55 @@ import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import { DeTag } from "./HeistUI";
 
-export default function ChatbotScreen({ teamName, teamData, onLogout }) {
+export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) {
   const [messages, setMessages] = useState([]);
   const [inputVal, setInputVal] = useState("");
   const [showSuccessIndicator, setShowSuccessIndicator] = useState(false);
   const [zoomImage, setZoomImage] = useState(null);
   const messagesEndRef = useRef(null);
 
-  // ── Initial messages ─────────────────────────────────────
+  const storageKey = `heist_chat_${teamId || teamName}`;
+
+  // ── Restore Chat Thread from localStorage on mount ─────────
   useEffect(() => {
     if (!teamData) return;
-    const solvedCount = teamData.solvedClues ? teamData.solvedClues.length : 0;
-    if (messages.length === 0) {
-      if (solvedCount === 0 && !teamData.currentClueId) {
-        setMessages([{
-          sender: "professor",
-          text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Are you ready to initiate the heist?`,
-          type: "welcome",
-        }]);
-      } else {
-        setMessages([{
-          sender: "professor",
-          text: `Operatives, welcome back to the channel. Decrypted logs show you have solved ${solvedCount} / ${TOTAL_CLUES_COUNT} clue(s). Let's continue the heist.`,
-          type: "system",
-        }]);
+
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          return;
+        }
+      } catch (e) {
+        console.error("Error restoring chat thread:", e);
       }
+    }
+
+    const solvedCount = teamData.solvedClues ? teamData.solvedClues.length : 0;
+    if (solvedCount === 0 && !teamData.currentClueId) {
+      setMessages([{
+        sender: "professor",
+        text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Are you ready to initiate the heist?`,
+        type: "welcome",
+      }]);
+    } else {
+      setMessages([{
+        sender: "professor",
+        text: `Operatives, welcome back to the channel. Decrypted logs show you have solved ${solvedCount} / ${TOTAL_CLUES_COUNT} clue(s). Let's continue the heist.`,
+        type: "system",
+      }]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamData]);
+
+  // Save chat thread to localStorage
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+    }
+  }, [messages, storageKey]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -54,6 +75,9 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
   const currentAttempts = teamData.attempts || 0;
   const isAllComplete   = solvedCount >= TOTAL_CLUES_COUNT;
 
+  // Resolve active clue from DB or fallback
+  let activeClue = CLUES.find(c => c.id === teamData.currentClueId);
+
   // Anti-collision clue selector with Stage gating (Stage 1: 8 clues, Stage 2: 2 clues, Final: 1 clue)
   const getNextClue = async (solvedList) => {
     const allTeams = await dbService.getAllTeams();
@@ -61,7 +85,6 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
       .map(t => t.currentClueId)
       .filter(Boolean);
 
-    // Target current stage pool
     let targetStage = 1;
     if (solvedList.length >= 10) {
       targetStage = 3;
@@ -70,13 +93,9 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
     }
 
     const stagePool = CLUES.filter(c => (c.stage || 1) === targetStage);
-
-    // Prefer clues in this stage not solved by this team AND not active on any other team
     const candidates = stagePool.filter(
       c => !solvedList.includes(c.id) && !activeClueIds.includes(c.id)
     );
-
-    // Fallback: any unsolved clue in this stage
     const fallback = stagePool.filter(c => !solvedList.includes(c.id));
     const pool = candidates.length > 0 ? candidates : fallback;
 
@@ -90,132 +109,130 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
 
     const userText = inputVal.trim();
     setInputVal("");
-    setMessages(prev => [...prev, { sender: "player", text: userText }]);
 
-    // Welcome flow & start commands
+    const newPlayerMsg = { sender: "player", text: userText };
+    setMessages(prev => [...prev, newPlayerMsg]);
+
     const lastMsg = messages[messages.length - 1];
     const isWelcomeStep = lastMsg?.type === "welcome";
     const startKeywords = ["yes", "yeah", "si", "sí", "y", "ok", "ready", "sure", "start", "go", "begin", "play", "lets go", "let's go"];
 
+    // 1. Initial Start / Welcome trigger
     if (isWelcomeStep || (!teamData.currentClueId && solvedCount === 0)) {
       if (startKeywords.some(w => userText.toLowerCase().includes(w))) {
-        setMessages(prev => [...prev, {
-          sender: "professor",
-          text: "Excellent. Remember, there is no turning back now. Initializing decoy signals. Stage 1 Clue 1 incoming...",
-        }]);
         const firstClue = await getNextClue([]);
         if (firstClue) {
-          await dbService.updateTeam(teamName, { currentClueId: firstClue.id, attempts: 0, locked: false });
-          setTimeout(() => {
-            setMessages(prev => [...prev, {
-              sender: "professor",
-              text: `STAGE 1 - CLUE #1: Analyze the visual file above. Enter the decryption code to proceed.`,
-              clue: firstClue,
-            }]);
-          }, 1200);
+          await dbService.updateTeam(teamId || teamName, { currentClueId: firstClue.id, attempts: 0, locked: false });
+          setMessages(prev => [...prev, {
+            sender: "professor",
+            text: `STAGE 1 - CLUE #1: Analyze the visual file above. Enter the decryption code to proceed.`,
+            clue: firstClue,
+          }]);
         }
       } else {
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: "We don't have time for hesitation. Lives are on the line. When you are ready, type 'START' or 'YES'.",
+          text: "We don't have time for hesitation. Type 'START' or 'YES' to receive your first clue.",
         }]);
       }
       return;
     }
 
-    // Gameplay answering
-    if (teamData.currentClueId) {
-      const activeClue = CLUES.find(c => c.id === teamData.currentClueId);
-      if (!activeClue) return;
+    // 2. Resolve target clue for answer checking
+    let clueToCheck = activeClue;
+    if (!clueToCheck) {
+      clueToCheck = await getNextClue(teamData.solvedClues || []);
+      if (clueToCheck) {
+        await dbService.updateTeam(teamId || teamName, { currentClueId: clueToCheck.id, attempts: 0, locked: false });
+      }
+    }
 
-      const isCorrect = userText.toLowerCase() === activeClue.answer.toLowerCase();
+    if (!clueToCheck) {
+      setMessages(prev => [...prev, {
+        sender: "professor",
+        text: "No active clue assigned. Type 'START' to request your next assignment.",
+      }]);
+      return;
+    }
 
-      if (isCorrect) {
-        setShowSuccessIndicator(true);
-        setTimeout(() => setShowSuccessIndicator(false), 1500);
+    // 3. Evaluate answer correctness
+    const isCorrect = userText.toLowerCase() === clueToCheck.answer.toLowerCase();
 
-        const newSolvedClues = [...(teamData.solvedClues || []), activeClue.id];
-        const newSolvedCount = newSolvedClues.length;
+    if (isCorrect) {
+      setShowSuccessIndicator(true);
+      setTimeout(() => setShowSuccessIndicator(false), 1500);
 
-        let successMsg = `CORRECT CODE CRACKED! Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`;
-        if (newSolvedCount === 8) {
-          successMsg = `STAGE 1 COMPLETE! All 8 initial clues decrypted. Advancing to Stage 2 (Semi-Final)...`;
-        } else if (newSolvedCount === 10) {
-          successMsg = `STAGE 2 COMPLETE! Advancing to Final Stage (Grand Vault)...`;
-        }
+      const newSolvedClues = [...(teamData.solvedClues || []), clueToCheck.id];
+      const newSolvedCount = newSolvedClues.length;
 
-        setMessages(prev => [...prev, {
-          sender: "professor",
-          text: successMsg,
-          type: "success",
-        }]);
+      let successMsg = `CORRECT CODE CRACKED! Code: "${clueToCheck.answer.toUpperCase()}". Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`;
+      if (newSolvedCount === 8) {
+        successMsg = `STAGE 1 COMPLETE! All 8 initial clues decrypted. Advancing to Stage 2 (Semi-Final)...`;
+      } else if (newSolvedCount === 10) {
+        successMsg = `STAGE 2 COMPLETE! Advancing to Final Stage (Grand Vault)...`;
+      }
 
-        if (newSolvedCount >= TOTAL_CLUES_COUNT) {
-          await dbService.updateTeam(teamName, {
-            score: newSolvedCount, solvedClues: newSolvedClues,
-            currentClueId: null, attempts: 0, locked: false,
-          });
-        } else {
-          const nextClue = await getNextClue(newSolvedClues);
-          if (nextClue) {
-            await dbService.updateTeam(teamName, {
-              score: newSolvedCount, solvedClues: newSolvedClues,
-              currentClueId: nextClue.id, attempts: 0, locked: false,
-            });
-            setTimeout(() => {
-              const currentStageNum = nextClue.stage || 1;
-              let clueNumInStage = newSolvedCount + 1;
-              if (currentStageNum === 2) clueNumInStage = newSolvedCount - 7;
-              if (currentStageNum === 3) clueNumInStage = 1;
-              setMessages(prev => [...prev, {
-                sender: "professor",
-                text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`,
-                clue: nextClue,
-              }]);
-            }, 1500);
-          }
-        }
+      setMessages(prev => [...prev, {
+        sender: "professor",
+        text: successMsg,
+        type: "success",
+      }]);
+
+      if (newSolvedCount >= TOTAL_CLUES_COUNT) {
+        await dbService.updateTeam(teamId || teamName, {
+          score: newSolvedCount, solvedClues: newSolvedClues,
+          currentClueId: null, attempts: 0, locked: false,
+        });
       } else {
-        const nextAttempts = currentAttempts + 1;
-        if (nextAttempts >= 3) {
-          await dbService.updateTeam(teamName, { attempts: nextAttempts, locked: true });
-          setMessages(prev => [...prev, {
-            sender: "professor",
-            text: "WRONG ANSWER. System locked. Contact The Professor for override.",
-            type: "error",
-          }]);
-        } else {
-          await dbService.updateTeam(teamName, { attempts: nextAttempts });
-          setMessages(prev => [...prev, {
-            sender: "professor",
-            text: `WRONG ANSWER. Attempts: ${nextAttempts} / 3. Try again, operative.`,
-            type: "error",
-          }]);
+        const nextClue = await getNextClue(newSolvedClues);
+        if (nextClue) {
+          await dbService.updateTeam(teamId || teamName, {
+            score: newSolvedCount, solvedClues: newSolvedClues,
+            currentClueId: nextClue.id, attempts: 0, locked: false,
+          });
+          setTimeout(() => {
+            const currentStageNum = nextClue.stage || 1;
+            let clueNumInStage = newSolvedCount + 1;
+            if (currentStageNum === 2) clueNumInStage = newSolvedCount - 7;
+            if (currentStageNum === 3) clueNumInStage = 1;
+            setMessages(prev => [...prev, {
+              sender: "professor",
+              text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`,
+              clue: nextClue,
+            }]);
+          }, 1200);
         }
       }
-    } else if (activeClue && (startKeywords.some(w => userText.toLowerCase().includes(w)) || userText.toLowerCase().includes("clue"))) {
-      setMessages(prev => [...prev, {
-        sender: "professor",
-        text: `Active Clue #${solvedCount + 1}: Decode this visual file:`,
-        clue: activeClue,
-      }]);
     } else {
-      setMessages(prev => [...prev, {
-        sender: "professor",
-        text: "The communications tunnel is active. Please focus on the mission protocols.",
-      }]);
+      // Incorrect answer
+      const nextAttempts = currentAttempts + 1;
+      const remaining = Math.max(0, 3 - nextAttempts);
+
+      if (nextAttempts >= 3) {
+        await dbService.updateTeam(teamId || teamName, { attempts: nextAttempts, locked: true });
+        setMessages(prev => [...prev, {
+          sender: "professor",
+          text: `WRONG ANSWER: "${userText}". 3 failed attempts reached. System locked. Request Professor override to unlock.`,
+          type: "error",
+        }]);
+      } else {
+        await dbService.updateTeam(teamId || teamName, { attempts: nextAttempts });
+        setMessages(prev => [...prev, {
+          sender: "professor",
+          text: `WRONG ANSWER: "${userText}". Attempts: ${nextAttempts} / 3 (${remaining} remaining). Try again!`,
+          type: "error",
+        }]);
+      }
     }
   };
 
   const handleUnlockOverride = async () => {
-    await dbService.updateTeam(teamName, { attempts: 0, locked: false });
+    await dbService.updateTeam(teamId || teamName, { attempts: 0, locked: false });
     setMessages(prev => [...prev, {
       sender: "professor",
       text: "SYSTEM OVERRIDE SUCCESSFUL. Access granted. You have 3 fresh attempts to solve the clue.",
     }]);
   };
-
-  const activeClue = CLUES.find(c => c.id === teamData.currentClueId);
 
   return (
     <HeistLayout>
@@ -241,7 +258,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
                 SECURE NETWORK LINK
               </div>
               <p className="heist-subtitle" style={{ fontSize: 9, marginTop: 2 }}>
-                OPERATIVE: {teamName.toUpperCase()} &nbsp;|&nbsp; LEVEL 1
+                OPERATIVE: {teamName.toUpperCase()}
               </p>
             </div>
           </div>
@@ -271,11 +288,11 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
                 </div>
                 <h2 className="phase-complete-title">HEIST COMPLETE</h2>
                 <p className="heist-subtitle" style={{ marginTop: 8, marginBottom: 24 }}>
-                  ALL 2 STAGES &amp; 11 CLUES DECRYPTED SUCCESSFULLY
+                  ALL STAGES &amp; {TOTAL_CLUES_COUNT} CLUES DECRYPTED SUCCESSFULLY
                 </p>
                 <div style={{ height: 1, background: "rgba(34,197,94,0.2)", width: "80%", margin: "0 auto 20px" }} />
                 <p className="heist-subtitle" style={{ lineHeight: 1.7, color: "var(--text-muted)" }}>
-                  Congratulations Operative! You have unlocked all 11 core vaults. Maintain position and stand by for final standings.
+                  Congratulations Operative! You have unlocked all {TOTAL_CLUES_COUNT} core vaults. Maintain position and stand by for final standings.
                 </p>
               </div>
             </div>

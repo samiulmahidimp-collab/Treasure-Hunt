@@ -133,8 +133,12 @@ export const dbService = {
         callback(state.gameSettings);
       };
       window.addEventListener("mock-db-update", handleUpdate);
+      window.addEventListener("storage", handleUpdate);
       handleUpdate();
-      return () => window.removeEventListener("mock-db-update", handleUpdate);
+      return () => {
+        window.removeEventListener("mock-db-update", handleUpdate);
+        window.removeEventListener("storage", handleUpdate);
+      };
     }
   },
 
@@ -172,8 +176,12 @@ export const dbService = {
         callback(state.teams);
       };
       window.addEventListener("mock-db-update", handleUpdate);
+      window.addEventListener("storage", handleUpdate);
       handleUpdate();
-      return () => window.removeEventListener("mock-db-update", handleUpdate);
+      return () => {
+        window.removeEventListener("mock-db-update", handleUpdate);
+        window.removeEventListener("storage", handleUpdate);
+      };
     }
   },
 
@@ -201,8 +209,12 @@ export const dbService = {
         }
       };
       window.addEventListener("mock-db-update", handleUpdate);
+      window.addEventListener("storage", handleUpdate);
       handleUpdate();
-      return () => window.removeEventListener("mock-db-update", handleUpdate);
+      return () => {
+        window.removeEventListener("mock-db-update", handleUpdate);
+        window.removeEventListener("storage", handleUpdate);
+      };
     }
   },
 
