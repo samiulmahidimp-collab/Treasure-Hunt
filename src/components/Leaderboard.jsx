@@ -30,10 +30,14 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam }) 
             let clueText = `Clue ${Math.min(solvedCount + 1, 8)}/8`;
             let stageColor = "#C8102E";
 
-            if (solvedCount >= 8 && solvedCount < 11) {
-              stageText = "Stage 2 (Final Vault)";
-              clueText = `Clue ${solvedCount - 7}/3`;
+            if (solvedCount >= 8 && solvedCount < 10) {
+              stageText = "Stage 2 (Semi-Final)";
+              clueText = `Clue ${solvedCount - 7}/2`;
               stageColor = "#d97706";
+            } else if (solvedCount === 10) {
+              stageText = "Final Stage (Grand Vault)";
+              clueText = `Clue 1/1`;
+              stageColor = "#a855f7";
             } else if (solvedCount >= 11) {
               stageText = "Finished";
               clueText = "All 11 Clues Solved";

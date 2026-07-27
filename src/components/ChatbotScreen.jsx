@@ -54,7 +54,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
   const currentAttempts = teamData.attempts || 0;
   const isAllComplete   = solvedCount >= TOTAL_CLUES_COUNT;
 
-  // Anti-collision clue selector with Stage gating (Stage 1: 8 clues, Stage 2: 3 clues)
+  // Anti-collision clue selector with Stage gating (Stage 1: 8 clues, Stage 2: 2 clues, Final: 1 clue)
   const getNextClue = async (solvedList) => {
     const allTeams = await dbService.getAllTeams();
     const activeClueIds = Object.values(allTeams)
@@ -62,7 +62,13 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
       .filter(Boolean);
 
     // Target current stage pool
-    const targetStage = solvedList.length < STAGE_1_CLUES_COUNT ? 1 : 2;
+    let targetStage = 1;
+    if (solvedList.length >= 10) {
+      targetStage = 3;
+    } else if (solvedList.length >= 8) {
+      targetStage = 2;
+    }
+
     const stagePool = CLUES.filter(c => (c.stage || 1) === targetStage);
 
     // Prefer clues in this stage not solved by this team AND not active on any other team
@@ -131,13 +137,16 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
         const newSolvedClues = [...(teamData.solvedClues || []), activeClue.id];
         const newSolvedCount = newSolvedClues.length;
 
-        const justCompletedStage1 = newSolvedCount === STAGE_1_CLUES_COUNT;
+        let successMsg = `CORRECT CODE CRACKED! Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`;
+        if (newSolvedCount === 8) {
+          successMsg = `STAGE 1 COMPLETE! All 8 initial clues decrypted. Advancing to Stage 2 (Semi-Final)...`;
+        } else if (newSolvedCount === 10) {
+          successMsg = `STAGE 2 COMPLETE! Advancing to Final Stage (Grand Vault)...`;
+        }
 
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: justCompletedStage1
-            ? `STAGE 1 COMPLETE! All 8 initial clues decrypted. Advancing to Stage 2 (Final Vault)...`
-            : `CORRECT CODE CRACKED! Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`,
+          text: successMsg,
           type: "success",
         }]);
 
@@ -155,7 +164,9 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
             });
             setTimeout(() => {
               const currentStageNum = nextClue.stage || 1;
-              const clueNumInStage = currentStageNum === 1 ? newSolvedCount + 1 : newSolvedCount - 7;
+              let clueNumInStage = newSolvedCount + 1;
+              if (currentStageNum === 2) clueNumInStage = newSolvedCount - 7;
+              if (currentStageNum === 3) clueNumInStage = 1;
               setMessages(prev => [...prev, {
                 sender: "professor",
                 text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`,
