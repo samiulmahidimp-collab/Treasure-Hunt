@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
-import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown } from "lucide-react";
+import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import QRScannerModal from "./QRScannerModal";
@@ -127,8 +127,9 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
 
   const initialWelcomeMsg = [{
     sender: "professor",
-    text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Analyze the visual clue above and enter the decryption key to proceed.`,
-    type: "welcome"
+    text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Are you ready to initiate the heist mission?`,
+    type: "welcome",
+    showStartButton: true
   }];
 
   // Instant message state initialization
@@ -185,6 +186,28 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamData, storageKey]);
+
+  // Interactive Start Mission button handler
+  const handleStartHeist = () => {
+    const updatedMessages = [
+      {
+        sender: "professor",
+        text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting.`,
+        type: "welcome",
+        showStartButton: false
+      },
+      {
+        sender: "player",
+        text: "WE ARE READY! INITIATE THE HEIST MISSION."
+      },
+      {
+        sender: "professor",
+        text: "THE HEIST HAS BEGUN! Analyze the active visual clue above and enter the decryption key to proceed.",
+        type: "success"
+      }
+    ];
+    updateMessagesAndSync(updatedMessages);
+  };
 
   // Save chat thread to localStorage & sync to DB
   const updateMessagesAndSync = (newMessages) => {
@@ -575,6 +598,31 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
                           {msg.sender === "professor" ? "THE PROFESSOR" : "OPERATIVE"}
                         </span>
                         <p className="chat-text">{msg.text}</p>
+                        
+                        {msg.showStartButton && (
+                          <div style={{ marginTop: 12 }}>
+                            <button
+                              type="button"
+                              className="heist-btn-solid"
+                              style={{
+                                padding: "8px 16px",
+                                fontSize: 12,
+                                letterSpacing: 1,
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 6,
+                                background: "#C8102E",
+                                borderColor: "#C8102E",
+                                cursor: "pointer",
+                                boxShadow: "0 0 12px rgba(200, 16, 46, 0.4)"
+                              }}
+                              onClick={handleStartHeist}
+                            >
+                              <Play size={14} />
+                              <span>START THE HEIST MISSION</span>
+                            </button>
+                          </div>
+                        )}
                         
                         {showClueMedia && (
                           <div
