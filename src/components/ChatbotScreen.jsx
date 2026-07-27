@@ -1,91 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
-import { CLUES, TOTAL_CLUES_COUNT, STAGE_1_CLUES_COUNT, STAGE_2_CLUES_COUNT } from "../clues";
+import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
 import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import { DeTag } from "./HeistUI";
 
 export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) {
-  const [messages, setMessages] = useState([]);
-  const [inputVal, setInputVal] = useState("");
-  const [showSuccessIndicator, setShowSuccessIndicator] = useState(false);
-  const [zoomImage, setZoomImage] = useState(null);
-  const messagesEndRef = useRef(null);
-
   const effectiveTeamId = teamId || teamData?.id || teamName;
   const storageKey = `heist_chat_${effectiveTeamId}`;
 
-  const hasInitializedRef = useRef(false);
-
-  // ── Restore Chat Thread from DB or localStorage on mount ───
-  useEffect(() => {
-    if (!teamData || hasInitializedRef.current) return;
-    hasInitializedRef.current = true;
-
-    // 1. Prefer chat history from server DB if available
-    if (teamData.chatMessages && Array.isArray(teamData.chatMessages) && teamData.chatMessages.length > 0) {
-      setMessages(teamData.chatMessages);
-      localStorage.setItem(storageKey, JSON.stringify(teamData.chatMessages));
-      return;
-    }
-
-    // 2. Fallback to localStorage
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMessages(parsed);
-          return;
-        }
-      } catch (e) {
-        console.error("Error restoring local chat thread:", e);
-      }
-    }
-
-    // 3. Initial welcome message
-    const solvedCount = teamData.solvedClues ? teamData.solvedClues.length : 0;
-    if (solvedCount === 0 && !teamData.currentClueId) {
-      setMessages([{
-        sender: "professor",
-        text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Type your answer code below or type 'START' to receive your first clue.`,
-        type: "welcome",
-      }]);
-    } else {
-      setMessages([{
-        sender: "professor",
-        text: `Operatives, welcome back to the channel. Decrypted logs show you have solved ${solvedCount} / ${TOTAL_CLUES_COUNT} clue(s). Let's continue the heist.`,
-        type: "system",
-      }]);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamData]);
-
-  // Save chat thread to localStorage & sync to DB
-  const updateMessagesAndSync = (newMessages) => {
-    setMessages(newMessages);
-    localStorage.setItem(storageKey, JSON.stringify(newMessages));
-    dbService.updateTeam(effectiveTeamId, { chatMessages: newMessages });
-  };
-
-  // ── Auto-assign clue if missing ───────────────────────────
-  useEffect(() => {
-    if (!teamData || isLocked || isAllComplete || teamData.currentClueId) return;
-
-    const autoAssign = async () => {
-      const firstClue = await getNextClue(teamData.solvedClues || []);
-      if (firstClue) {
-        await dbService.updateTeam(effectiveTeamId, { currentClueId: firstClue.id, attempts: 0, locked: false });
-      }
-    };
-    autoAssign();
-  }, [teamData?.currentClueId, isLocked, isAllComplete, effectiveTeamId]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, teamData]);
-
+  // Default active clue fallback so clue box NEVER disappears
   const safeTeamData = teamData || {
     id: effectiveTeamId,
     name: teamName,
@@ -102,14 +27,11 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
   const currentAttempts = safeTeamData.attempts || 0;
   const isAllComplete   = solvedCount >= TOTAL_CLUES_COUNT;
 
-  // Resolve active clue from DB
-  let activeClue = CLUES.find(c => c.id === safeTeamData.currentClueId);
-
-  // Anti-collision clue selector with Stage gating (Stage 1: 8 clues, Stage 2: 2 clues, Final: 1 clue)
+  // Anti-collision clue selector with Stage gating
   const getNextClue = async (solvedList) => {
     const allTeams = await dbService.getAllTeams();
     const activeClueIds = Object.values(allTeams)
-      .map(t => t.currentClueId)
+      .map(t => t?.currentClueId)
       .filter(Boolean);
 
     let targetStage = 1;
@@ -126,9 +48,72 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     const fallback = stagePool.filter(c => !solvedList.includes(c.id));
     const pool = candidates.length > 0 ? candidates : fallback;
 
-    if (pool.length === 0) return null;
+    if (pool.length === 0) return CLUES[0];
     return pool[Math.floor(Math.random() * pool.length)];
   };
+
+  // Immediate default active clue so clue panel renders instantly on frame 1
+  let activeClue = CLUES.find(c => c.id === safeTeamData.currentClueId);
+  if (!activeClue && !isAllComplete) {
+    const stage1Clues = CLUES.filter(c => (c.stage || 1) === 1);
+    const unsolvedStage1 = stage1Clues.filter(c => !(safeTeamData.solvedClues || []).includes(c.id));
+    activeClue = unsolvedStage1.length > 0 ? unsolvedStage1[0] : CLUES[0];
+  }
+
+  // Instant message state initialization
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return [{
+      sender: "professor",
+      text: `Bella ciao, team ${teamName.toUpperCase()}. I am The Professor. The plan is set, the police are outside, and the vault is waiting. Analyze the visual clue above and enter the decryption key to proceed.`,
+      type: "welcome",
+      clue: activeClue
+    }];
+  });
+
+  const [inputVal, setInputVal] = useState("");
+  const [showSuccessIndicator, setShowSuccessIndicator] = useState(false);
+  const [zoomImage, setZoomImage] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  // Sync server chat messages if available
+  useEffect(() => {
+    if (teamData?.chatMessages && Array.isArray(teamData.chatMessages) && teamData.chatMessages.length > 0) {
+      setMessages(teamData.chatMessages);
+      localStorage.setItem(storageKey, JSON.stringify(teamData.chatMessages));
+    }
+  }, [teamData?.chatMessages, storageKey]);
+
+  // Save chat thread to localStorage & sync to DB
+  const updateMessagesAndSync = (newMessages) => {
+    setMessages(newMessages);
+    localStorage.setItem(storageKey, JSON.stringify(newMessages));
+    dbService.updateTeam(effectiveTeamId, { chatMessages: newMessages });
+  };
+
+  // Auto-assign clue to DB if currentClueId is missing
+  useEffect(() => {
+    if (isLocked || isAllComplete || safeTeamData.currentClueId) return;
+
+    const autoAssign = async () => {
+      const firstClue = await getNextClue(safeTeamData.solvedClues || []);
+      if (firstClue) {
+        await dbService.updateTeam(effectiveTeamId, { currentClueId: firstClue.id, attempts: 0, locked: false });
+      }
+    };
+    autoAssign();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safeTeamData.currentClueId, isLocked, isAllComplete, effectiveTeamId]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -141,29 +126,14 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
     let currentMsgList = [...messages, newPlayerMsg];
     updateMessagesAndSync(currentMsgList);
 
-    const startKeywords = ["yes", "yeah", "si", "sí", "y", "ok", "ready", "sure", "start", "go", "begin", "play", "lets go", "let's go"];
-
     // Ensure target clue exists
     let clueToCheck = activeClue;
     if (!clueToCheck) {
-      clueToCheck = await getNextClue(teamData.solvedClues || []);
+      clueToCheck = await getNextClue(safeTeamData.solvedClues || []);
       if (clueToCheck) {
         await dbService.updateTeam(effectiveTeamId, { currentClueId: clueToCheck.id, attempts: 0, locked: false });
         activeClue = clueToCheck;
       }
-    }
-
-    // Check if input is a simple start keyword when no clue has been answered yet
-    if (startKeywords.includes(userText.toLowerCase()) && solvedCount === 0) {
-      if (clueToCheck) {
-        currentMsgList = [...currentMsgList, {
-          sender: "professor",
-          text: `STAGE 1 - CLUE #1: Analyze the visual file above. Enter the decryption code to proceed.`,
-          clue: clueToCheck,
-        }];
-        updateMessagesAndSync(currentMsgList);
-      }
-      return;
     }
 
     if (!clueToCheck) {
@@ -182,7 +152,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, onLogout }) 
       setShowSuccessIndicator(true);
       setTimeout(() => setShowSuccessIndicator(false), 1500);
 
-      const newSolvedClues = [...(teamData.solvedClues || []), clueToCheck.id];
+      const newSolvedClues = [...(safeTeamData.solvedClues || []), clueToCheck.id];
       const newSolvedCount = newSolvedClues.length;
 
       let successMsg = `CORRECT CODE CRACKED! Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`;
