@@ -152,16 +152,18 @@ export default function PlayerPortal({ onBack }) {
     );
   }
 
-  // ── Game paused ─────────────────────────────────────────
-  if (gameSettings.isPaused) {
+  // ── Game paused (Globally or Individually by Admin) ─────────────────
+  if (gameSettings.isPaused || teamData?.paused) {
     return (
       <HeistLayout>
         <div className="heist-waiting">
           <div className="heist-card heist-waiting-card">
             <Pause size={48} color="#d97706" style={{ animation: "pulse 1.5s infinite alternate" }} />
-            <h2 className="heist-waiting-title" style={{ color: "#d97706" }}>MISSION ON HOLD</h2>
+            <h2 className="heist-waiting-title" style={{ color: "#d97706" }}>GAME PAUSED BY ADMIN</h2>
             <p className="heist-waiting-text">
-              THE PROFESSOR HAS PAUSED THE GAME CHANNELS. MAINTAIN POSITIONS AND STAND BY.
+              {teamData?.paused && !gameSettings.isPaused
+                ? `Operative ${activeTeam.toUpperCase()}, your team channel has been individually paused by Admin. Maintain position.`
+                : "THE PROFESSOR HAS PAUSED THE GAME FOR ALL TEAMS. MAINTAIN POSITIONS AND STAND BY."}
             </p>
             <p className="heist-badge">OPERATIVE: {activeTeam.toUpperCase()}</p>
             <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>

@@ -7,6 +7,7 @@ import {
   onSnapshot, 
   getDoc 
 } from "firebase/firestore";
+import { DEFAULT_CLUES } from "./clues";
 
 // Vite Environment variables for Firebase
 const firebaseConfig = {
@@ -18,7 +19,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Check if firebase is configured
 const isFirebaseConfigured = 
   firebaseConfig.apiKey && 
   firebaseConfig.projectId && 
@@ -47,39 +47,60 @@ if (isFirebaseConfigured) {
 // ==========================================
 const MOCK_STORAGE_KEY = "la_casa_del_tesoro_db";
 
+const getInitialTeamsState = () => ({
+  mahid: {
+    score: 0,
+    solvedClues: [],
+    currentClueId: "clue_1",
+    stage: 1,
+    clueIndexInStage: 1,
+    sessionToken: "",
+    attempts: 0,
+    locked: false,
+    paused: false
+  },
+  oyshee: {
+    score: 0,
+    solvedClues: [],
+    currentClueId: "clue_1",
+    stage: 1,
+    clueIndexInStage: 1,
+    sessionToken: "",
+    attempts: 0,
+    locked: false,
+    paused: false
+  },
+  prizon: {
+    score: 0,
+    solvedClues: [],
+    currentClueId: "clue_1",
+    stage: 1,
+    clueIndexInStage: 1,
+    sessionToken: "",
+    attempts: 0,
+    locked: false,
+    paused: false
+  }
+});
+
 const getMockDB = () => {
   const data = localStorage.getItem(MOCK_STORAGE_KEY);
-  if (data) return JSON.parse(data);
+  if (data) {
+    const parsed = JSON.parse(data);
+    if (!parsed.clues || parsed.clues.length === 0) {
+      parsed.clues = DEFAULT_CLUES;
+      localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(parsed));
+    }
+    return parsed;
+  }
 
-  // Initial Mock State
   const initialState = {
     gameSettings: {
       isStarted: false,
       isPaused: false
     },
-    teams: {
-      mahid: {
-        score: 0,
-        solvedClues: [],
-        sessionToken: "",
-        attempts: 0,
-        locked: false
-      },
-      oyshee: {
-        score: 0,
-        solvedClues: [],
-        sessionToken: "",
-        attempts: 0,
-        locked: false
-      },
-      prizon: {
-        score: 0,
-        solvedClues: [],
-        sessionToken: "",
-        attempts: 0,
-        locked: false
-      }
-    }
+    clues: DEFAULT_CLUES,
+    teams: getInitialTeamsState()
   };
   localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(initialState));
   return initialState;
@@ -89,7 +110,6 @@ const updateMockDB = (updater) => {
   const dbState = getMockDB();
   updater(dbState);
   localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(dbState));
-  // Dispatch a custom event to notify listeners of local change (simulating real-time socket/subscription)
   window.dispatchEvent(new Event("mock-db-update"));
 };
 
@@ -106,7 +126,6 @@ export const dbService = {
         if (snapshot.exists()) {
           callback(snapshot.data());
         } else {
-          // Initialize settings if they don't exist
           const defaultSettings = { isStarted: false, isPaused: false };
           setDoc(docRef, defaultSettings);
           callback(defaultSettings);
@@ -115,15 +134,12 @@ export const dbService = {
         console.error("Firestore settings subscription error:", error);
       });
     } else {
-      // Local Mock DB behavior
       const handleUpdate = () => {
         const state = getMockDB();
         callback(state.gameSettings);
       };
       window.addEventListener("mock-db-update", handleUpdate);
-      // Immediate invoke
       handleUpdate();
-      // Unsubscribe callback
       return () => window.removeEventListener("mock-db-update", handleUpdate);
     }
   },
@@ -140,27 +156,69 @@ export const dbService = {
     }
   },
 
-  // Subscribe to all teams for Leaderboard
+  // Subscribe to Clues Array (Admin Content Management)
+  subscribeClues: (callback) => {
+    if (!useMock) {
+      const cluesRef = doc(db, "game_settings", "clues_list");
+      return onSnapshot(cluesRef, (snapshot) => {
+        if (snapshot.exists() && snapshot.data().list) {
+          callback(snapshot.data().list);
+        } else {
+          setDoc(cluesRef, { list: DEFAULT_CLUES });
+          callback(DEFAULT_CLUES);
+        }
+      });
+    } else {
+      const handleUpdate = () => {
+        const state = getMockDB();
+        callback(state.clues || DEFAULT_CLUES);
+      };
+      window.addEventListener("mock-db-update", handleUpdate);
+      handleUpdate();
+      return () => window.removeEventListener("mock-db-update", handleUpdate);
+    }
+  },
+
+  // Get Clues once
+  getClues: async () => {
+    if (!useMock) {
+      const cluesRef = doc(db, "game_settings", "clues_list");
+      const snap = await getDoc(cluesRef);
+      if (snap.exists() && snap.data().list) {
+        return snap.data().list;
+      }
+      return DEFAULT_CLUES;
+    } else {
+      const state = getMockDB();
+      return state.clues || DEFAULT_CLUES;
+    }
+  },
+
+  // Update Clues Array (Admin Edit)
+  updateClues: async (newClues) => {
+    if (!useMock) {
+      const cluesRef = doc(db, "game_settings", "clues_list");
+      await setDoc(cluesRef, { list: newClues });
+    } else {
+      updateMockDB((state) => {
+        state.clues = newClues;
+      });
+    }
+  },
+
+  // Subscribe to all teams for Admin Leaderboard
   subscribeTeams: (callback) => {
     if (!useMock) {
-      // In Firestore, we listen to the teams collection
-      const handleSnapshot = () => {
-        const teamsRef = doc(db, "game_settings", "teams_list");
-        return onSnapshot(teamsRef, (snapshot) => {
-          if (snapshot.exists()) {
-            callback(snapshot.data());
-          } else {
-            const initialTeams = {
-              mahid: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false },
-              oyshee: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false },
-              prizon: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false }
-            };
-            setDoc(teamsRef, initialTeams);
-            callback(initialTeams);
-          }
-        });
-      };
-      return handleSnapshot();
+      const teamsRef = doc(db, "game_settings", "teams_list");
+      return onSnapshot(teamsRef, (snapshot) => {
+        if (snapshot.exists()) {
+          callback(snapshot.data());
+        } else {
+          const initialTeams = getInitialTeamsState();
+          setDoc(teamsRef, initialTeams);
+          callback(initialTeams);
+        }
+      });
     } else {
       const handleUpdate = () => {
         const state = getMockDB();
@@ -182,8 +240,17 @@ export const dbService = {
           if (allTeams[teamName]) {
             callback(allTeams[teamName]);
           } else {
-            // If team doesn't exist, create template
-            const defaultTeam = { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false };
+            const defaultTeam = {
+              score: 0,
+              solvedClues: [],
+              currentClueId: "clue_1",
+              stage: 1,
+              clueIndexInStage: 1,
+              sessionToken: "",
+              attempts: 0,
+              locked: false,
+              paused: false
+            };
             updateDoc(docRef, { [teamName]: defaultTeam });
             callback(defaultTeam);
           }
@@ -202,7 +269,7 @@ export const dbService = {
     }
   },
 
-  // Update specific team fields
+  // Update specific team fields (Score, Stage, Paused, Locked, etc.)
   updateTeam: async (teamName, teamData) => {
     if (!useMock) {
       const docRef = doc(db, "game_settings", "teams_list");
@@ -212,32 +279,37 @@ export const dbService = {
         const updatedTeam = { ...currentData[teamName], ...teamData };
         await updateDoc(docRef, { [teamName]: updatedTeam });
       } else {
-        const initialTeams = {
-          mahid: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false },
-          oyshee: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false },
-          prizon: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false }
-        };
+        const initialTeams = getInitialTeamsState();
         initialTeams[teamName] = { ...initialTeams[teamName], ...teamData };
         await setDoc(docRef, initialTeams);
       }
     } else {
       updateMockDB((state) => {
         if (!state.teams[teamName]) {
-          state.teams[teamName] = { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false };
+          state.teams[teamName] = {
+            score: 0,
+            solvedClues: [],
+            currentClueId: "clue_1",
+            stage: 1,
+            clueIndexInStage: 1,
+            sessionToken: "",
+            attempts: 0,
+            locked: false,
+            paused: false
+          };
         }
         state.teams[teamName] = { ...state.teams[teamName], ...teamData };
       });
     }
   },
 
-  // Get a one-time snapshot of ALL teams (used for anti-collision clue picking)
+  // One-time snapshot of ALL teams
   getAllTeams: async () => {
     if (!useMock) {
       const docRef = doc(db, "game_settings", "teams_list");
       const snap = await getDoc(docRef);
       return snap.exists() ? snap.data() : {};
     } else {
-      // Synchronous read directly from localStorage — no subscription needed
       const state = getMockDB();
       return state.teams || {};
     }
@@ -246,21 +318,20 @@ export const dbService = {
   // Admin resets the whole game state
   resetGame: async () => {
     const defaultSettings = { isStarted: false, isPaused: false };
-    const defaultTeams = {
-      mahid: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false },
-      oyshee: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false },
-      prizon: { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false }
-    };
+    const defaultTeams = getInitialTeamsState();
 
     if (!useMock) {
       const settingsRef = doc(db, "game_settings", "settings");
       const teamsRef = doc(db, "game_settings", "teams_list");
+      const cluesRef = doc(db, "game_settings", "clues_list");
       await setDoc(settingsRef, defaultSettings);
       await setDoc(teamsRef, defaultTeams);
+      await setDoc(cluesRef, { list: DEFAULT_CLUES });
     } else {
       updateMockDB((state) => {
         state.gameSettings = defaultSettings;
         state.teams = defaultTeams;
+        state.clues = DEFAULT_CLUES;
       });
     }
   }
