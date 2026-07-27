@@ -101,7 +101,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
           setTimeout(() => {
             setMessages(prev => [...prev, {
               sender: "professor",
-              text: `CLUE #1: Identify this image. The filename (without extension) is your answer.`,
+              text: `CLUE #1: Analyze this image and enter the secret code to proceed.`,
               clue: firstClue,
             }]);
           }, 1200);
@@ -150,7 +150,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
             setTimeout(() => {
               setMessages(prev => [...prev, {
                 sender: "professor",
-                text: `CLUE #${newSolvedCount + 1}: Decode the following visual file:`,
+                text: `CLUE #${newSolvedCount + 1}: Analyze this visual file and enter the secret code:`,
                 clue: nextClue,
               }]);
             }, 1500);
