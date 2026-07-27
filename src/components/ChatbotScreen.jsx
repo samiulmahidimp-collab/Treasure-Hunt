@@ -353,14 +353,14 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
                   value={inputVal}
                   onChange={(e) => setInputVal(e.target.value)}
                   placeholder={activeClue ? "TYPE DECRYPTION KEY..." : "RESPOND TO THE PROFESSOR..."}
-                  disabled={isLocked || isPhase1Complete}
+                  disabled={isLocked || isAllComplete}
                   autoComplete="off"
                 />
                 <button
                   type="submit"
                   className="heist-btn-solid"
                   style={{ padding: "10px 16px" }}
-                  disabled={isLocked || isPhase1Complete}
+                  disabled={isLocked || isAllComplete}
                 >
                   <Send size={15} />
                 </button>
