@@ -64,18 +64,21 @@ if (isFirebaseConfigured) {
 // ==========================================
 // MOCK DATABASE IMPLEMENTATION (Local Storage)
 // ==========================================
-const MOCK_STORAGE_KEY = "la_casa_del_tesoro_db_v2";
+const MOCK_STORAGE_KEY = "la_casa_del_tesoro_db_v3";
 
 const getMockDB = () => {
   const data = localStorage.getItem(MOCK_STORAGE_KEY);
   if (data) {
     const parsed = JSON.parse(data);
-    // Ensure all 8 teams exist in current state
+    // Ensure all 8 teams exist and have updated passwords in current state
     const defaultTeams = generateDefaultTeams();
     let updated = false;
     Object.keys(defaultTeams).forEach(key => {
       if (!parsed.teams[key]) {
         parsed.teams[key] = defaultTeams[key];
+        updated = true;
+      } else if (parsed.teams[key].password !== defaultTeams[key].password) {
+        parsed.teams[key].password = defaultTeams[key].password;
         updated = true;
       }
     });

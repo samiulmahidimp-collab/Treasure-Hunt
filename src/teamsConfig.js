@@ -3,12 +3,12 @@ export const TEAMS_CONFIG = [
   {
     id: "khuje_berai",
     name: "খুঁজে বেড়াই",
-    password: "bolod"
+    password: "chemri"
   },
   {
     id: "team_damn",
     name: "Team Damn",
-    password: "chemri"
+    password: "bolod"
   },
   {
     id: "los_reyes",
