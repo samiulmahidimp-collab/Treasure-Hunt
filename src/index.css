@@ -913,6 +913,96 @@ select.heist-input option { background: #0e0a0a; color: var(--text-primary); }
 }
 
 /* ═══════════════════════════════════════════════════════
+   HEIST HEADER & WAITING SCREEN
+   ═══════════════════════════════════════════════════════ */
+.heist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(8, 6, 6, 0.94);
+  border-bottom: 1.5px solid var(--border-red);
+  padding: 12px 24px;
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  width: 100%;
+}
+
+.heist-header-logo {
+  font-family: var(--font-stencil);
+  font-size: 18px;
+  letter-spacing: 2.5px;
+  color: var(--text-white);
+  text-transform: uppercase;
+  text-shadow: 0 0 14px rgba(200,16,46,0.4);
+}
+
+.heist-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.heist-badge {
+  background: rgba(200, 16, 46, 0.15);
+  border: 1px solid var(--border-red);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 5px 12px;
+  border-radius: 2px;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.heist-waiting {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  width: 100%;
+}
+
+.heist-waiting-card {
+  max-width: 460px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-red);
+  border-top: 3px solid var(--red-primary);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 30px rgba(200,16,46,0.15);
+}
+
+.heist-waiting-title {
+  font-family: var(--font-stencil);
+  font-size: 26px;
+  letter-spacing: 3px;
+  color: var(--red-primary);
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+.heist-waiting-text {
+  font-family: var(--font-condensed);
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════
    CHATBOT SCREEN LAYOUT & MESSAGING
    ═══════════════════════════════════════════════════════ */
 .chat-body {

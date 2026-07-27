@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { dbService } from "../firebase";
-import { AlertTriangle, Pause, LogOut, Users } from "lucide-react";
+import { AlertTriangle, Pause, LogOut, Users, Play } from "lucide-react";
 import ChatbotScreen from "./ChatbotScreen";
 import HeistLayout from "./HeistLayout";
 import { DeTag } from "./HeistUI";
@@ -140,10 +140,21 @@ export default function PlayerPortal({ onBack }) {
             <AlertTriangle size={48} color="#C8102E" className="pulse-glow" />
             <h2 className="heist-waiting-title">CHANNEL ENCRYPTED</h2>
             <p className="heist-waiting-text">
-              THE PROFESSOR HAS NOT STARTED THE PROTOCOL YET. STAND BY FOR THE SIGNAL...
+              THE PROFESSOR HAS NOT DEPLOYED THE SIGNAL YET. YOU CAN STAND BY OR LAUNCH DIRECTLY.
             </p>
             <p className="heist-badge">OPERATIVE: {activeTeam.toUpperCase()}</p>
-            <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 8 }}>
+
+            <button
+              className="heist-btn-solid"
+              style={{ width: "100%", marginTop: 8 }}
+              onClick={async () => {
+                await dbService.updateGameSettings({ isStarted: true, isPaused: false });
+              }}
+            >
+              <Play size={16} /> ACTIVATE MISSION &amp; ENTER CHAT
+            </button>
+
+            <button className="heist-btn" onClick={handleLogout} style={{ width: "100%", marginTop: 4 }}>
               <LogOut size={14} /> DISCONNECT
             </button>
           </div>
