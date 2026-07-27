@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
-import { CLUES, CLUES_PER_ROUND } from "../clues";
+import { CLUES, TOTAL_CLUES_COUNT, STAGE_1_CLUES_COUNT, STAGE_2_CLUES_COUNT } from "../clues";
 import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
@@ -27,7 +27,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
       } else {
         setMessages([{
           sender: "professor",
-          text: `Operatives, welcome back to the channel. Decrypted logs show you have solved ${solvedCount} clue(s). Let's continue the heist.`,
+          text: `Operatives, welcome back to the channel. Decrypted logs show you have solved ${solvedCount} / ${TOTAL_CLUES_COUNT} clue(s). Let's continue the heist.`,
           type: "system",
         }]);
       }
@@ -52,24 +52,26 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
   const solvedCount     = teamData.solvedClues ? teamData.solvedClues.length : 0;
   const isLocked        = teamData.locked || false;
   const currentAttempts = teamData.attempts || 0;
-  const isPhase1Complete = solvedCount >= CLUES_PER_ROUND;
+  const isAllComplete   = solvedCount >= TOTAL_CLUES_COUNT;
 
-  // Anti-collision clue selector:
-  // Reads ALL teams from DB in one shot, collects their currentClueId values,
-  // and avoids assigning a clue that another team is currently solving.
+  // Anti-collision clue selector with Stage gating (Stage 1: 8 clues, Stage 2: 3 clues)
   const getNextClue = async (solvedList) => {
     const allTeams = await dbService.getAllTeams();
     const activeClueIds = Object.values(allTeams)
       .map(t => t.currentClueId)
       .filter(Boolean);
 
-    // Prefer clues not solved by this team AND not active on any other team
-    const candidates = CLUES.filter(
+    // Target current stage pool
+    const targetStage = solvedList.length < STAGE_1_CLUES_COUNT ? 1 : 2;
+    const stagePool = CLUES.filter(c => (c.stage || 1) === targetStage);
+
+    // Prefer clues in this stage not solved by this team AND not active on any other team
+    const candidates = stagePool.filter(
       c => !solvedList.includes(c.id) && !activeClueIds.includes(c.id)
     );
 
-    // Fallback: if all remaining unsolved clues are in use by others, pick any unsolved one
-    const fallback = CLUES.filter(c => !solvedList.includes(c.id));
+    // Fallback: any unsolved clue in this stage
+    const fallback = stagePool.filter(c => !solvedList.includes(c.id));
     const pool = candidates.length > 0 ? candidates : fallback;
 
     if (pool.length === 0) return null;
@@ -78,7 +80,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!inputVal.trim() || isLocked || isPhase1Complete) return;
+    if (!inputVal.trim() || isLocked || isAllComplete) return;
 
     const userText = inputVal.trim();
     setInputVal("");
@@ -93,7 +95,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
       if (startKeywords.some(w => userText.toLowerCase().includes(w))) {
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: "Excellent. Remember, there is no turning back now. Initializing decoy signals. Clue 1 incoming...",
+          text: "Excellent. Remember, there is no turning back now. Initializing decoy signals. Stage 1 Clue 1 incoming...",
         }]);
         const firstClue = await getNextClue([]);
         if (firstClue) {
@@ -101,7 +103,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
           setTimeout(() => {
             setMessages(prev => [...prev, {
               sender: "professor",
-              text: `CLUE #1: Analyze the visual file above. Enter the decryption code to proceed.`,
+              text: `STAGE 1 - CLUE #1: Analyze the visual file above. Enter the decryption code to proceed.`,
               clue: firstClue,
             }]);
           }, 1200);
@@ -129,13 +131,17 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
         const newSolvedClues = [...(teamData.solvedClues || []), activeClue.id];
         const newSolvedCount = newSolvedClues.length;
 
+        const justCompletedStage1 = newSolvedCount === STAGE_1_CLUES_COUNT;
+
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: `CORRECT CODE CRACKED! Great job, team. Solved: ${newSolvedCount} / ${CLUES_PER_ROUND}.`,
+          text: justCompletedStage1
+            ? `STAGE 1 COMPLETE! All 8 initial clues decrypted. Advancing to Stage 2 (Final Vault)...`
+            : `CORRECT CODE CRACKED! Progress: ${newSolvedCount} / ${TOTAL_CLUES_COUNT}.`,
           type: "success",
         }]);
 
-        if (newSolvedCount >= CLUES_PER_ROUND) {
+        if (newSolvedCount >= TOTAL_CLUES_COUNT) {
           await dbService.updateTeam(teamName, {
             score: newSolvedCount, solvedClues: newSolvedClues,
             currentClueId: null, attempts: 0, locked: false,
@@ -148,9 +154,11 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
               currentClueId: nextClue.id, attempts: 0, locked: false,
             });
             setTimeout(() => {
+              const currentStageNum = nextClue.stage || 1;
+              const clueNumInStage = currentStageNum === 1 ? newSolvedCount + 1 : newSolvedCount - 7;
               setMessages(prev => [...prev, {
                 sender: "professor",
-                text: `CLUE #${newSolvedCount + 1}: Analyze the visual file above. Enter the decryption code to proceed.`,
+                text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`,
                 clue: nextClue,
               }]);
             }, 1500);
@@ -227,7 +235,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
             </div>
           </div>
           <div className="heist-header-actions">
-            <div className="heist-badge">CRACKED: <strong>{solvedCount} / {CLUES_PER_ROUND}</strong></div>
+            <div className="heist-badge">PROGRESS: <strong>{solvedCount} / {TOTAL_CLUES_COUNT}</strong></div>
             <button className="heist-btn" style={{ padding: "7px 14px", fontSize: 12 }} onClick={onLogout}>
               <LogOut size={13} /> DISCONNECT
             </button>
@@ -236,7 +244,7 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
 
         {/* Chat body */}
         <div className="chat-body">
-          {isPhase1Complete ? (
+          {isAllComplete ? (
             <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", padding: 20 }}>
               <div className="heist-card phase-complete-card">
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
@@ -250,13 +258,13 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
                     <path d="M50,75 Q35,70 25,65 Q35,80 50,85 Q65,80 75,65 Q65,70 50,75 Z" fill="#C8102E" />
                   </svg>
                 </div>
-                <h2 className="phase-complete-title">PHASE 1 COMPLETE</h2>
+                <h2 className="phase-complete-title">HEIST COMPLETE</h2>
                 <p className="heist-subtitle" style={{ marginTop: 8, marginBottom: 24 }}>
-                  AWAITING SEMI-FINAL INSTRUCTIONS FROM THE PROFESSOR
+                  ALL 2 STAGES &amp; 11 CLUES DECRYPTED SUCCESSFULLY
                 </p>
                 <div style={{ height: 1, background: "rgba(34,197,94,0.2)", width: "80%", margin: "0 auto 20px" }} />
                 <p className="heist-subtitle" style={{ lineHeight: 1.7, color: "var(--text-muted)" }}>
-                  You have successfully decrypted all {CLUES_PER_ROUND} core vaults. Stay tuned on this secure terminal channel. Do not disconnect your comms link.
+                  Congratulations Operative! You have unlocked all 11 core vaults. Maintain position and stand by for final standings.
                 </p>
               </div>
             </div>
