@@ -84,11 +84,13 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
     setInputVal("");
     setMessages(prev => [...prev, { sender: "player", text: userText }]);
 
-    // Welcome flow
+    // Welcome flow & start commands
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg?.type === "welcome") {
-      const positive = ["yes", "yeah", "si", "sí", "y", "ok", "ready", "sure"];
-      if (positive.some(w => userText.toLowerCase().includes(w))) {
+    const isWelcomeStep = lastMsg?.type === "welcome";
+    const startKeywords = ["yes", "yeah", "si", "sí", "y", "ok", "ready", "sure", "start", "go", "begin", "play", "lets go", "let's go"];
+
+    if (isWelcomeStep || (!teamData.currentClueId && solvedCount === 0)) {
+      if (startKeywords.some(w => userText.toLowerCase().includes(w))) {
         setMessages(prev => [...prev, {
           sender: "professor",
           text: "Excellent. Remember, there is no turning back now. Initializing decoy signals. Clue 1 incoming...",
@@ -99,15 +101,15 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
           setTimeout(() => {
             setMessages(prev => [...prev, {
               sender: "professor",
-              text: `CLUE #1: Solve this image code. The file name is the answer key.`,
+              text: `CLUE #1: Identify this image. The filename (without extension) is your answer.`,
               clue: firstClue,
             }]);
-          }, 1500);
+          }, 1200);
         }
       } else {
         setMessages(prev => [...prev, {
           sender: "professor",
-          text: "We don't have time for hesitation. Lives are on the line. When you are ready, type 'YES'.",
+          text: "We don't have time for hesitation. Lives are on the line. When you are ready, type 'START' or 'YES'.",
         }]);
       }
       return;
@@ -172,6 +174,12 @@ export default function ChatbotScreen({ teamName, teamData, onLogout }) {
           }]);
         }
       }
+    } else if (activeClue && (startKeywords.some(w => userText.toLowerCase().includes(w)) || userText.toLowerCase().includes("clue"))) {
+      setMessages(prev => [...prev, {
+        sender: "professor",
+        text: `Active Clue #${solvedCount + 1}: Decode this visual file:`,
+        clue: activeClue,
+      }]);
     } else {
       setMessages(prev => [...prev, {
         sender: "professor",
