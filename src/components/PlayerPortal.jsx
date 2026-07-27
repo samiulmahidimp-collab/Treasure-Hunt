@@ -89,6 +89,7 @@ export default function PlayerPortal({ onBack }) {
   const handleLogout = () => {
     localStorage.removeItem("heist_team");
     localStorage.removeItem("heist_session_token");
+    localStorage.removeItem("heist_role");
     setActiveTeam("");
     setSessionToken("");
     setPasswordVal("");

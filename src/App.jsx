@@ -6,8 +6,7 @@
  *   "player" → PlayerPortal (team select + game)
  *   "admin"  → AdminPortal (professor's command room)
  *
- * The HeistLayout (mask background) is applied inside each screen component,
- * so the background image is always visible regardless of state.
+ * Role state is persisted in localStorage so browser refreshes maintain exact position!
  */
 import React, { useState } from "react";
 import { Analytics } from "@vercel/analytics/react";
@@ -16,13 +15,24 @@ import AdminPortal from "./components/AdminPortal";
 import PlayerPortal from "./components/PlayerPortal";
 
 export default function App() {
-  const [role, setRole] = useState(null); // null | "player" | "admin"
+  const [role, setRoleState] = useState(() => {
+    return localStorage.getItem("heist_role") || null;
+  });
+
+  const handleSetRole = (newRole) => {
+    if (newRole) {
+      localStorage.setItem("heist_role", newRole);
+    } else {
+      localStorage.removeItem("heist_role");
+    }
+    setRoleState(newRole);
+  };
 
   return (
     <>
-      {role === null     && <LandingPage onSelectRole={setRole} />}
-      {role === "player" && <PlayerPortal onBack={() => setRole(null)} />}
-      {role === "admin"  && <AdminPortal  onBack={() => setRole(null)} />}
+      {role === null     && <LandingPage onSelectRole={handleSetRole} />}
+      {role === "player" && <PlayerPortal onBack={() => handleSetRole(null)} />}
+      {role === "admin"  && <AdminPortal  onBack={() => handleSetRole(null)} />}
       <Analytics />
     </>
   );
