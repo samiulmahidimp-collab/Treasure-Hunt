@@ -64,6 +64,32 @@ export default function LandingPage({ onSelectRole }) {
             </p>
           </div>
 
+          {/* Connection Status Badge */}
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "center", 
+            alignItems: "center", 
+            gap: 6, 
+            fontSize: 10, 
+            fontFamily: "var(--font-mono)",
+            color: (window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE") ? "#22c55e" : "#d97706",
+            background: (window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE") ? "rgba(34, 197, 94, 0.08)" : "rgba(217, 119, 6, 0.08)",
+            border: `1px solid ${(window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE") ? "rgba(34, 197, 94, 0.2)" : "rgba(217, 119, 6, 0.2)"}`,
+            padding: "4px 12px",
+            borderRadius: 4,
+            width: "fit-content",
+            margin: "0 auto 20px auto"
+          }}>
+            <span style={{ 
+              width: 6, 
+              height: 6, 
+              borderRadius: "50%", 
+              background: (window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE") ? "#22c55e" : "#d97706",
+              display: "inline-block"
+            }} />
+            <span>{(window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE") ? "DATABASE: FIRESTORE LIVE" : "DATABASE: LOCAL OFFLINE MODE"}</span>
+          </div>
+
           {/* Ornamental divider */}
           <div className="login-divider" aria-hidden="true">
             <span className="login-divider-icon">◆</span>

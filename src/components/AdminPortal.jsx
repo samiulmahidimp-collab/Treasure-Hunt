@@ -190,6 +190,29 @@ export default function AdminPortal({ onBack }) {
         <section className="heist-card" style={{ display: "flex", flexDirection: "column", gap: 20, alignSelf: "start", borderColor: "rgba(200, 16, 46, 0.4)" }}>
           <h2 className="heist-section-title" style={{ fontSize: 18, letterSpacing: 2 }}>SYSTEM COMMANDS</h2>
 
+          {/* Database Connection Status */}
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 6, 
+            fontSize: 10, 
+            fontFamily: "var(--font-mono)",
+            color: window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE" ? "#22c55e" : "#d97706",
+            background: window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE" ? "rgba(34, 197, 94, 0.08)" : "rgba(217, 119, 6, 0.08)",
+            border: `1px solid ${window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE" ? "rgba(34, 197, 94, 0.2)" : "rgba(217, 119, 6, 0.2)"}`,
+            padding: "6px 12px",
+            borderRadius: 4,
+          }}>
+            <span style={{ 
+              width: 6, 
+              height: 6, 
+              borderRadius: "50%", 
+              background: window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE" ? "#22c55e" : "#d97706",
+              display: "inline-block"
+            }} />
+            <span>{window.__HEIST_DB_MODE__ === "FIRESTORE_LIVE" ? "DATABASE: FIRESTORE LIVE" : "DATABASE: LOCAL MOCK MODE"}</span>
+          </div>
+
           <div style={{ background: "rgba(0, 0, 0, 0.4)", border: "1px solid rgba(255, 255, 255, 0.08)", padding: "12px 16px", borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: 11, letterSpacing: 1, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>GLOBAL GAME STATUS</span>
             {gameSettings.isStarted ? (
