@@ -578,8 +578,8 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
             </div>
           ) : (
             <>
-              {/* Active Clue Intelligence panel */}
-              {activeClue && (
+              {/* Active Clue Intelligence panel — Hidden until Admin starts game */}
+              {isGameStarted && activeClue && (
                 <div className="clue-panel">
                   <div className="clue-header">
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
