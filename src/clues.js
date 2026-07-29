@@ -77,8 +77,13 @@ export const FINAL_STAGE_CLUES = [
     stage: 3,
     stageName: "Final Stage (Grand Vault)",
     image: "/pictures/final/FInal-Clue.pdf",
-    answer: "final-clue",
-    altAnswers: ["finalclue", "final clue", "final-clue", "final_clue"],
+    answer: "jonogoner_raja_mahid_bro",
+    altAnswers: [
+      "jonogoner_raja_mahid_bro",
+      "jonogoner raja mahid bro",
+      "jonogonerrajamahidbro",
+      "jonogoner-raja-mahid-bro"
+    ],
     isVideo: false,
     isPDF: true,
     description: "FINAL VAULT CLUE: Download and inspect the encrypted PDF document below to retrieve the ultimate heist code!"

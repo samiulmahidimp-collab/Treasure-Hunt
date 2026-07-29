@@ -1,15 +1,30 @@
 import React from "react";
-import { CheckCircle, ShieldAlert, Pause, Play, Unlock, FileText, Eye } from "lucide-react";
+import { CheckCircle, ShieldAlert, Pause, Play, Unlock, FileText, Eye, Trophy, Award } from "lucide-react";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
 import { TEAMS_CONFIG } from "../teamsConfig";
 
 export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, onResolveHelpTeam, onPreviewClue }) {
+  // Sort teams dynamically by highest score / solved clues first (Strict Hierarchy)
+  const sortedTeams = TEAMS_CONFIG.map((t) => {
+    const data = (teams && (teams[t.id] || teams[t.name])) || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [], needsHelp: false, currentClueId: null };
+    const solvedCount = data.solvedClues ? data.solvedClues.length : (data.score || 0);
+    return { teamConfig: t, data, solvedCount };
+  }).sort((a, b) => {
+    // 1. Highest solved clues count first
+    if (b.solvedCount !== a.solvedCount) {
+      return b.solvedCount - a.solvedCount;
+    }
+    // 2. Fewer failed attempts as tiebreaker
+    return (a.data.attempts || 0) - (b.data.attempts || 0);
+  });
+
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
       <table className="heist-table">
         <thead>
           <tr>
-            <th>TEAM CODE</th>
+            <th style={{ width: 70, textAlign: "center" }}>RANK</th>
+            <th>SQUAD IDENTITY</th>
             <th>ATTENDING CLUE &amp; INTEL</th>
             <th>TOTAL PROGRESS</th>
             <th>ATTEMPTS LEFT</th>
@@ -18,9 +33,8 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, on
           </tr>
         </thead>
         <tbody>
-          {TEAMS_CONFIG.map((t) => {
-            const data = (teams && (teams[t.id] || teams[t.name])) || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [], needsHelp: false, currentClueId: null };
-            const solvedCount = data.solvedClues ? data.solvedClues.length : (data.score || 0);
+          {sortedTeams.map(({ teamConfig: t, data, solvedCount }, rankIdx) => {
+            const rank = rankIdx + 1;
             const remainingAttempts = 3 - (data.attempts || 0);
             const isDanger = remainingAttempts === 1 && !data.locked;
 
@@ -43,15 +57,55 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, on
               stageText = "Stage 2 (Semi-Final)";
               stageColor = "#d97706";
             } else if (solvedCount >= 11) {
-              stageText = "Final Stage";
+              stageText = "Final Stage (Grand Vault)";
               stageColor = "#a855f7";
             }
 
+            // Rank styling
+            let rankBadge = (
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                #{rank}
+              </span>
+            );
+
+            if (rank === 1) {
+              rankBadge = (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(234, 179, 8, 0.2)", border: "1px solid #eab308", color: "#eab308", padding: "3px 8px", borderRadius: 4, fontSize: 11, fontWeight: 800 }}>
+                  <Trophy size={13} color="#eab308" />
+                  <span>#1</span>
+                </div>
+              );
+            } else if (rank === 2) {
+              rankBadge = (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(148, 163, 184, 0.2)", border: "1px solid #94a3b8", color: "#94a3b8", padding: "3px 8px", borderRadius: 4, fontSize: 11, fontWeight: 800 }}>
+                  <Award size={13} color="#94a3b8" />
+                  <span>#2</span>
+                </div>
+              );
+            } else if (rank === 3) {
+              rankBadge = (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "rgba(217, 119, 6, 0.2)", border: "1px solid #d97706", color: "#d97706", padding: "3px 8px", borderRadius: 4, fontSize: 11, fontWeight: 800 }}>
+                  <Award size={13} color="#d97706" />
+                  <span>#3</span>
+                </div>
+              );
+            }
+
             return (
-              <tr key={t.id}>
+              <tr key={t.id} style={{ background: rank === 1 ? "rgba(234, 179, 8, 0.04)" : "transparent" }}>
+                {/* RANK POSITION */}
+                <td style={{ textAlign: "center" }}>
+                  {rankBadge}
+                </td>
+
                 {/* TEAM NAME */}
                 <td style={{ fontWeight: 700, letterSpacing: 1, fontFamily: "var(--font-stencil)", fontSize: 15 }}>
                   {t.name}
+                  {rank === 1 && (
+                    <span style={{ fontSize: 9, color: "#eab308", background: "rgba(234,179,8,0.15)", padding: "1px 5px", borderRadius: 3, marginLeft: 8, letterSpacing: 0.5 }}>
+                      LEADER
+                    </span>
+                  )}
                 </td>
 
                 {/* CURRENTLY ATTENDING CLUE & INTEL */}
