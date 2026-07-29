@@ -97,7 +97,7 @@ export default function AdminPortal({ onBack }) {
           image: editFormData.image.trim(),
           description: editFormData.description.trim(),
           stage: parseInt(editFormData.stage) || 1,
-          stageName: parseInt(editFormData.stage) === 2 ? "Stage 2 (Final Vault)" : "Stage 1 (Initial Hunt)"
+          stageName: parseInt(editFormData.stage) === 2 ? "Stage 2 (Semi-Final)" : parseInt(editFormData.stage) === 3 ? "Final Stage (Grand Vault)" : "Stage 1 (Initial Hunt)"
         };
       }
       return c;
@@ -418,8 +418,9 @@ export default function AdminPortal({ onBack }) {
                               value={editFormData.stage}
                               onChange={(e) => setEditFormData({ ...editFormData, stage: e.target.value })}
                             >
-                              <option value={1}>Stage 1 (Initial Hunt)</option>
-                              <option value={2}>Stage 2 (Final Vault)</option>
+                              <option value={1}>Stage 1 (Initial Hunt - 8 Clues)</option>
+                              <option value={2}>Stage 2 (Semi-Final - 3 Clues)</option>
+                              <option value={3}>Final Stage (Grand Vault - PDF Clue)</option>
                             </select>
                           </div>
                           <div>
