@@ -8,20 +8,23 @@ import {
   getDoc 
 } from "firebase/firestore";
 import { TEAMS_CONFIG } from "./teamsConfig";
+import { STAGE_1_CLUES } from "./clues";
 
 export const generateDefaultTeams = () => {
   const teams = {};
   const now = Date.now();
-  const stage1Ids = ["clue_1", "clue_2", "clue_3", "clue_4", "clue_5", "clue_6", "clue_7", "clue_8"];
+  const stage1Ids = STAGE_1_CLUES.map(c => c.id);
 
   TEAMS_CONFIG.forEach((t, idx) => {
+    // Spread team assignments across all Stage 1 clues with maximum separation
+    const assignedIndex = (idx * 2) % stage1Ids.length;
     teams[t.id] = {
       id: t.id,
       name: t.name,
       password: t.password,
       score: 0,
       solvedClues: [],
-      currentClueId: stage1Ids[idx % stage1Ids.length],
+      currentClueId: stage1Ids[assignedIndex],
       chatMessages: [],
       sessionToken: "",
       attempts: 0,

@@ -1,103 +1,72 @@
-// Configuration mapping clue images to stage, id, answer, and description
-// Stage 1: 8 clues (/pictures/stage1/)
+// Configuration mapping clue images and videos to stage, id, answer, and description
+// Stage 1: 35+ clues (/pictures/stage1/)
 // Stage 2: 2 clues (/pictures/stage2/)
 // Final Stage: 1 clue (/pictures/final/)
-// Total: 11 clues
 
-export const STAGE_1_CLUES_COUNT = 8;
+export const STAGE_1_RAW_FILES = [
+  "afrewa.png", "kiytth.png", "qplwet.png", "abklcd.jpg", "ahfiuw.jpg", "apndaq.jpg",
+  "jk1106.png", "kshpfl.png", "afdhus.png", "dfghjk.png", "efigpn.png", "fhwhgh.png",
+  "fkhjol.png", "fwepkl.png", "ghajof.png", "hjpnet.png", "jhkdklt.mp4", "jnoipk.png",
+  "ljknpm.png", "mjkhol.png", "najfep.png", "oksghj.png", "pklshu.png", "psigko.png",
+  "qrwhwk.png", "quwysa.png", "rbafla.png", "rskter.png", "sghijk.png", "shfhwo.png",
+  "skgbks.png", "smkgho.mp4", "tkrunp.png", "uiolfh.png", "uteuok.png"
+];
+
+export const STAGE_1_CLUES_COUNT = 8; // Number of Stage 1 clues each team must solve to advance
 export const STAGE_2_CLUES_COUNT = 2;
 export const FINAL_STAGE_CLUES_COUNT = 1;
 export const TOTAL_CLUES_COUNT = 11;
 
-export const INITIAL_CLUES = [
-  {
-    id: "clue_1",
+export const STAGE_1_CLUES = STAGE_1_RAW_FILES.map((fileName, index) => {
+  const answer = fileName.split(".")[0];
+  const isVideo = fileName.endsWith(".mp4");
+  return {
+    id: `clue_s1_${index + 1}`,
     stage: 1,
     stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/afrewa.png",
-    answer: "afrewa",
-    description: "CLUE #1: Analyze this image and enter the secret code."
-  },
+    image: `/pictures/stage1/${fileName}`,
+    answer: answer,
+    isVideo: isVideo,
+    description: isVideo 
+      ? `CLUE #${index + 1}: Analyze this video intel file and enter the secret code.`
+      : `CLUE #${index + 1}: Analyze this visual intel file and enter the secret code.`
+  };
+});
+
+export const STAGE_2_CLUES = [
   {
-    id: "clue_2",
-    stage: 1,
-    stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/kiytth.png",
-    answer: "kiytth",
-    description: "CLUE #2: Analyze this image and enter the secret code."
-  },
-  {
-    id: "clue_3",
-    stage: 1,
-    stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/qplwet.png",
-    answer: "qplwet",
-    description: "CLUE #3: Analyze this image and enter the secret code."
-  },
-  {
-    id: "clue_4",
-    stage: 1,
-    stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/abklcd.jpg",
-    answer: "abklcd",
-    description: "CLUE #4: Analyze this image and enter the secret code."
-  },
-  {
-    id: "clue_5",
-    stage: 1,
-    stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/ahfiuw.jpg",
-    answer: "ahfiuw",
-    description: "CLUE #5: Analyze this image and enter the secret code."
-  },
-  {
-    id: "clue_6",
-    stage: 1,
-    stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/apndaq.jpg",
-    answer: "apndaq",
-    description: "CLUE #6: Analyze this image and enter the secret code."
-  },
-  {
-    id: "clue_7",
-    stage: 1,
-    stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/jk1106.png",
-    answer: "jk1106",
-    description: "CLUE #7: Analyze this image and enter the secret code."
-  },
-  {
-    id: "clue_8",
-    stage: 1,
-    stageName: "Stage 1 (Initial Hunt)",
-    image: "/pictures/stage1/kshpfl.png",
-    answer: "kshpfl",
-    description: "CLUE #8: Analyze this image and enter the secret code."
-  },
-  {
-    id: "clue_9",
+    id: "clue_s2_1",
     stage: 2,
     stageName: "Stage 2 (Semi-Final)",
     image: "/pictures/stage2/opklru.jpg",
     answer: "opklru",
-    description: "CLUE #9: Analyze this image and enter the secret code."
+    description: "CLUE (Stage 2): Analyze this image and enter the secret code."
   },
   {
-    id: "clue_10",
+    id: "clue_s2_2",
     stage: 2,
     stageName: "Stage 2 (Semi-Final)",
     image: "/pictures/stage2/romhkf.jpg",
     answer: "romhkf",
-    description: "CLUE #10: Analyze this image and enter the secret code."
-  },
+    description: "CLUE (Stage 2): Analyze this image and enter the secret code."
+  }
+];
+
+export const FINAL_STAGE_CLUES = [
   {
-    id: "clue_11",
+    id: "clue_final_1",
     stage: 3,
     stageName: "Final Stage (Grand Vault)",
     image: "/pictures/final/yen7rc.jpg",
     answer: "yen7rc",
-    description: "CLUE #11 (Final): Analyze this image and enter the secret code."
+    description: "CLUE (Final): Analyze this image and enter the secret code."
   }
+];
+
+export const INITIAL_CLUES = [
+  ...STAGE_1_CLUES,
+  ...STAGE_2_CLUES,
+  ...FINAL_STAGE_CLUES
 ];
 
 export let CLUES = [...INITIAL_CLUES];

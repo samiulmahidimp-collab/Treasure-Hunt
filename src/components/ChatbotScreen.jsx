@@ -649,19 +649,31 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
                         onClick={() => setZoomImage({ src: activeClue.image, filename: activeClue.answer })}
                         title="Click to Zoom & Download"
                       >
-                        <img
-                          src={activeClue.image}
-                          alt="Active Clue Visual"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://placehold.co/600x400/0D0D0D/C8102E?text=PICTURE+NOT+LOADED";
-                          }}
-                        />
+                        {activeClue.image.endsWith(".mp4") ? (
+                          <video
+                            src={activeClue.image}
+                            controls
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            style={{ width: "100%", maxHeight: 220, borderRadius: 4, display: "block" }}
+                          />
+                        ) : (
+                          <img
+                            src={activeClue.image}
+                            alt="Active Clue Visual"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://placehold.co/600x400/0D0D0D/C8102E?text=PICTURE+NOT+LOADED";
+                            }}
+                          />
+                        )}
                         <div className="clue-zoom-icon"><ZoomIn size={14} color="#fff" /></div>
                       </div>
                       <div className="clue-info">
                         <p className="clue-desc">{activeClue.description}</p>
-                        <p className="clue-hint">Tip: Tap image to view full view. Enter answer or scan QR code below.</p>
+                        <p className="clue-hint">Tip: Tap image or video to view full view. Enter answer or scan QR code below.</p>
                       </div>
                     </div>
                   )}
@@ -797,9 +809,20 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
           <div className="zoom-modal" onClick={() => setZoomImage(null)}>
             <div className="zoom-content" onClick={(e) => e.stopPropagation()}>
               <button className="zoom-close" onClick={() => setZoomImage(null)}><X size={24} /></button>
-              <img src={zoomImage.src} alt="Zoomed Clue" className="zoom-img" />
-              <a href={zoomImage.src} download={zoomImage.filename + ".png"} className="heist-btn-solid" style={{ textDecoration: "none" }}>
-                <Download size={15} /> DOWNLOAD CLUE
+              {zoomImage.src.endsWith(".mp4") ? (
+                <video
+                  src={zoomImage.src}
+                  controls
+                  autoPlay
+                  loop
+                  playsInline
+                  style={{ maxWidth: "100%", maxHeight: "70vh", borderRadius: 8, display: "block", margin: "0 auto 16px" }}
+                />
+              ) : (
+                <img src={zoomImage.src} alt="Zoomed Clue" className="zoom-img" />
+              )}
+              <a href={zoomImage.src} download={zoomImage.filename + (zoomImage.src.endsWith(".mp4") ? ".mp4" : ".png")} className="heist-btn-solid" style={{ textDecoration: "none" }}>
+                <Download size={15} /> DOWNLOAD CLUE INTEL
               </a>
             </div>
           </div>

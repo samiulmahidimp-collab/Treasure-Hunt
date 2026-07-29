@@ -54,6 +54,21 @@ export const TEAMS_CONFIG = [
     id: "team_lannisters",
     name: "Team Lannisters",
     password: "harbojjat"
+  },
+  {
+    id: "mayer_doya_team",
+    name: "মায়ের দোয়া টিম",
+    password: "nosto"
+  },
+  {
+    id: "synergy",
+    name: "Synergy",
+    password: "habla"
+  },
+  {
+    id: "otondro_prohori",
+    name: "otondro Prohori",
+    password: "bebla"
   }
 ];
 
