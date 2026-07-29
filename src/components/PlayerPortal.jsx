@@ -165,8 +165,23 @@ export default function PlayerPortal({ onBack }) {
       </HeistLayout>
     );
   }
-
-
+  // ── Loading state while fetching team data from Firebase ───────────────────
+  if (activeTeam && teamData === null) {
+    return (
+      <HeistLayout>
+        <div className="heist-waiting">
+          <div className="heist-card heist-waiting-card">
+            <h2 className="heist-waiting-title" style={{ color: "var(--red-primary)", letterSpacing: 2 }}>
+              ESTABLISHING CHANNEL...
+            </h2>
+            <p className="heist-waiting-text" style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 8 }}>
+              Securing network link with The Professor. Please standby...
+            </p>
+          </div>
+        </div>
+      </HeistLayout>
+    );
+  }
 
   // ── Game paused (Global or Individual) ───────────────────
   if (gameSettings.isPaused || teamData?.isPaused) {

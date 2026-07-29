@@ -256,7 +256,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
 
   // Auto-assign clue to DB if currentClueId is missing
   useEffect(() => {
-    if (isLocked || isAllComplete || safeTeamData.currentClueId) return;
+    if (!teamData || isLocked || isAllComplete || safeTeamData.currentClueId) return;
 
     const autoAssign = async () => {
       const solvedList = safeTeamData.solvedClues || [];
