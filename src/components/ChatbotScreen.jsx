@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
-import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
+import { CLUES, STAGE_1_CLUES, STAGE_2_CLUES, FINAL_STAGE_CLUES, TOTAL_CLUES_COUNT } from "../clues";
 import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play, Clock, Trophy, Award, FileText } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
@@ -82,50 +82,56 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
   // Anti-collision clue selector with Stage gating & Strict No-Duplicate Shuffle Enforcement
   const getNextClue = async (solvedList = []) => {
     const solvedSet = new Set(solvedList || []);
+    const count = solvedList.length;
 
-    // 1. Strictly filter out any clue already solved by this team in this game
-    const unsolvedClues = CLUES.filter(c => !solvedSet.has(c.id));
-    if (unsolvedClues.length === 0) return null;
-
-    // 2. Determine target stage based on progress
-    let targetStage = 1;
-    if (solvedList.length >= 10) {
-      targetStage = 3;
-    } else if (solvedList.length >= 8) {
-      targetStage = 2;
+    // 1. Stage 3 (Final Vault PDF Clue): Unlocked after solving 8 Stage 1 + 3 Stage 2 clues (count >= 11)
+    if (count >= 11) {
+      return FINAL_STAGE_CLUES[0]; // clue_final_1 (FInal-Clue.pdf)
     }
 
-    // 3. Filter unsolved clues by stage
-    const stageUnsolved = unsolvedClues.filter(c => (c.stage || 1) === targetStage);
-    const poolToUse = stageUnsolved.length > 0 ? stageUnsolved : unsolvedClues;
+    // 2. Stage 2 (Semi-Final): Unlocked after solving 8 Stage 1 clues (count 8, 9, 10)
+    // All teams solve the EXACT SAME 3 Stage 2 clues in identical order!
+    if (count >= 8) {
+      const stage2Index = count - 8; // 0 for 9th clue, 1 for 10th clue, 2 for 11th clue
+      return STAGE_2_CLUES[stage2Index] || STAGE_2_CLUES[0];
+    }
 
-    // 4. Exclude clues currently active on opponent teams to minimize collisions
+    // 3. Stage 1 (Initial Hunt): Spreads initial clues dynamically across 58 Stage 1 clues
+    const unsolvedStage1 = STAGE_1_CLUES.filter(c => !solvedSet.has(c.id));
+    if (unsolvedStage1.length === 0) return STAGE_1_CLUES[0];
+
+    // Anti-collision for Stage 1 clues across live teams
     const allTeams = await dbService.getAllTeams();
     const activeOpponentClueIds = Object.values(allTeams)
       .map(t => t?.currentClueId)
       .filter(Boolean);
 
-    const nonCollidingPool = poolToUse.filter(c => !activeOpponentClueIds.includes(c.id));
-    const finalPool = nonCollidingPool.length > 0 ? nonCollidingPool : poolToUse;
+    const nonCollidingPool = unsolvedStage1.filter(c => !activeOpponentClueIds.includes(c.id));
+    const finalPool = nonCollidingPool.length > 0 ? nonCollidingPool : unsolvedStage1;
 
-    // 5. Pick a random, shuffled clue from eligible unsolved pool
     const randomIndex = Math.floor(Math.random() * finalPool.length);
     return finalPool[randomIndex];
   };
 
-  // Immediate default active clue so clue panel renders instantly on frame 1 without repeating solved clues
+  // Immediate default active clue fallback for frame 1
   let activeClue = CLUES.find(c => c.id === safeTeamData.currentClueId);
   if (!activeClue && !isAllComplete) {
-    const solvedSet = new Set(safeTeamData.solvedClues || []);
-    const stage1Unsolved = CLUES.filter(c => (c.stage || 1) === 1 && !solvedSet.has(c.id));
-    
-    // Deterministic hash based on team ID so DIFFERENT teams get DIFFERENT starting clues!
-    let hash = 0;
-    for (let i = 0; i < (effectiveTeamId || "").length; i++) {
-      hash += effectiveTeamId.charCodeAt(i);
+    const solvedList = safeTeamData.solvedClues || [];
+    const count = solvedList.length;
+    if (count >= 11) {
+      activeClue = FINAL_STAGE_CLUES[0];
+    } else if (count >= 8) {
+      activeClue = STAGE_2_CLUES[count - 8] || STAGE_2_CLUES[0];
+    } else {
+      const solvedSet = new Set(solvedList);
+      const stage1Unsolved = STAGE_1_CLUES.filter(c => !solvedSet.has(c.id));
+      let hash = 0;
+      for (let i = 0; i < (effectiveTeamId || "").length; i++) {
+        hash += effectiveTeamId.charCodeAt(i);
+      }
+      const teamClueIndex = stage1Unsolved.length > 0 ? Math.abs(hash) % stage1Unsolved.length : 0;
+      activeClue = stage1Unsolved[teamClueIndex] || STAGE_1_CLUES[0];
     }
-    const teamClueIndex = stage1Unsolved.length > 0 ? Math.abs(hash) % stage1Unsolved.length : 0;
-    activeClue = stage1Unsolved[teamClueIndex] || CLUES[0];
   }
 
   const initialWelcomeMsg = [{
@@ -384,8 +390,8 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
         // Trigger Stage 1 victory celebration modal
         setShowStage1CongratsModal(true);
         successMsg = `🎉 CONGRATULATIONS OPERATIVES! STAGE 1 IS OFFICIALLY CLEARED! You have decrypted all 8 core vaults of Stage 1 with outstanding precision. The Professor commends Team ${teamName.toUpperCase()}. Advancing to Stage 2 (Semi-Final)...`;
-      } else if (newSolvedCount === 10) {
-        successMsg = `STAGE 2 COMPLETE! Advancing to Final Stage (Grand Vault)...`;
+      } else if (newSolvedCount === 11) {
+        successMsg = `🎉 STAGE 2 COMPLETE! You have solved all 3 Stage 2 semi-final clues. Advancing to Final Stage (Grand Vault - PDF Intel Document)...`;
       }
 
       currentMsgList = [...currentMsgList, {
@@ -415,7 +421,9 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
 
             const nextClueMsg = {
               sender: "professor",
-              text: `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`
+              text: currentStageNum === 3
+                ? `🚨 FINAL VAULT UNLOCKED (STAGE 3): Download and inspect the encrypted PDF document above to decode the ultimate heist key!`
+                : `STAGE ${currentStageNum} - CLUE #${clueNumInStage}: Analyze the visual file above. Enter the decryption code to proceed.`
             };
             setMessages(prev => {
               const updated = [...prev, nextClueMsg];
