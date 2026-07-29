@@ -988,12 +988,11 @@ html.chat-active, body.chat-active {
     overflow: hidden !important;
   }
 
-  /* Compact top clue bar on mobile so Clue, Chat, and Input are all visible at once */
   .clue-panel {
     padding: 6px 10px !important;
-    gap: 4px !important;
+    gap: 6px !important;
     flex-shrink: 0 !important;
-    max-height: 80px !important;
+    max-height: none !important;
   }
 
   .clue-header {

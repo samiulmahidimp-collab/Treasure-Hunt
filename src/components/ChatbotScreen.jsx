@@ -647,23 +647,52 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
                   {!isClueCollapsed && (
                     <div className="clue-body">
                       {activeClue.isPDF || activeClue.image.endsWith(".pdf") ? (
-                        <div style={{ padding: "16px 12px", textAlign: "center", background: "rgba(200, 16, 46, 0.12)", border: "1px dashed #C8102E", borderRadius: 6, width: "100%" }}>
-                          <FileText size={44} color="#C8102E" style={{ marginBottom: 8 }} />
-                          <h4 style={{ color: "#fff", fontSize: 14, margin: "0 0 6px", fontFamily: "var(--font-display)", letterSpacing: 1 }}>
-                            ENCRYPTED PDF INTEL DOCUMENT
-                          </h4>
-                          <p style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 14, lineHeight: 1.5 }}>
-                            Download and inspect the PDF document below to retrieve the final heist decryption key!
-                          </p>
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          padding: "10px 14px",
+                          background: "rgba(200, 16, 46, 0.15)",
+                          border: "1px dashed #C8102E",
+                          borderRadius: 6,
+                          width: "100%",
+                          flexWrap: "wrap"
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 160 }}>
+                            <FileText size={32} color="#C8102E" style={{ flexShrink: 0 }} />
+                            <div style={{ textAlign: "left" }}>
+                              <div style={{ color: "#fff", fontSize: 13, fontWeight: 700, fontFamily: "var(--font-display)", letterSpacing: 1 }}>
+                                FINAL VAULT PDF INTEL
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2, lineHeight: 1.3 }}>
+                                Inspect document to decode final key
+                              </div>
+                            </div>
+                          </div>
+
                           <a
                             href={activeClue.image}
                             download="FInal-Clue.pdf"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="heist-btn-solid"
-                            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", fontSize: 12, background: "#C8102E", borderColor: "#C8102E", color: "#fff", textDecoration: "none", fontWeight: 700, borderRadius: 4 }}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "8px 14px",
+                              fontSize: 12,
+                              background: "#C8102E",
+                              borderColor: "#C8102E",
+                              color: "#fff",
+                              textDecoration: "none",
+                              fontWeight: 800,
+                              borderRadius: 4,
+                              flexShrink: 0
+                            }}
                           >
-                            <Download size={15} /> DOWNLOAD FINAL CLUE PDF
+                            <Download size={15} /> DOWNLOAD PDF
                           </a>
                         </div>
                       ) : (
