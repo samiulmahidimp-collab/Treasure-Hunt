@@ -1,5 +1,5 @@
 // Configuration mapping clue images and videos to stage, id, answer, and description
-// Stage 1: 35+ clues (/pictures/stage1/)
+// Stage 1: 40 clues (/pictures/stage1/)
 // Stage 2: 2 clues (/pictures/stage2/)
 // Final Stage: 1 clue (/pictures/final/)
 
@@ -7,9 +7,10 @@ export const STAGE_1_RAW_FILES = [
   "afrewa.png", "kiytth.png", "qplwet.png", "abklcd.jpg", "ahfiuw.jpg", "apndaq.jpg",
   "jk1106.png", "kshpfl.png", "afdhus.png", "dfghjk.png", "efigpn.png", "fhwhgh.png",
   "fkhjol.png", "fwepkl.png", "ghajof.png", "hjpnet.png", "jhkdklt.mp4", "jnoipk.png",
-  "ljknpm.png", "mjkhol.png", "najfep.png", "oksghj.png", "pklshu.png", "psigko.png",
-  "qrwhwk.png", "quwysa.png", "rbafla.png", "rskter.png", "sghijk.png", "shfhwo.png",
-  "skgbks.png", "smkgho.mp4", "tkrunp.png", "uiolfh.png", "uteuok.png"
+  "ljknpm.png", "mjghsl.png", "mjkhol.png", "najfep.png", "oksghj.png", "pklshu.png",
+  "psigko.png", "pskggh.png", "qrwhwk.png", "quwysa.png", "rbafla.png", "rskter.png",
+  "sghijk.png", "shfhwo.png", "sihijk.png", "skgbks.png", "smkgho.mp4", "soigsl.png",
+  "tkrunp.png", "uiolfh.png", "uteuok.png", "yoovsk.png"
 ];
 
 export const STAGE_1_CLUES_COUNT = 8; // Number of Stage 1 clues each team must solve to advance
