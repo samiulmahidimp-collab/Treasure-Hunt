@@ -43,8 +43,8 @@ export const STAGE_2_CLUES = [
     id: "clue_s2_1",
     stage: 2,
     stageName: "Stage 2 (Semi-Final)",
-    image: "/pictures/stage2/akgpsl.png",
-    answer: "akgpsl",
+    image: "/pictures/stage2/uoseiu.png",
+    answer: "uoseiu",
     isVideo: false,
     isPDF: false,
     description: "STAGE 2 CLUE #1: Analyze this semi-final intel file and enter the secret code."
@@ -53,8 +53,8 @@ export const STAGE_2_CLUES = [
     id: "clue_s2_2",
     stage: 2,
     stageName: "Stage 2 (Semi-Final)",
-    image: "/pictures/stage2/uoseiu.png",
-    answer: "uoseiu",
+    image: "/pictures/stage2/uy54gh.png",
+    answer: "uy54gh",
     isVideo: false,
     isPDF: false,
     description: "STAGE 2 CLUE #2: Analyze this semi-final intel file and enter the secret code."
@@ -63,8 +63,8 @@ export const STAGE_2_CLUES = [
     id: "clue_s2_3",
     stage: 2,
     stageName: "Stage 2 (Semi-Final)",
-    image: "/pictures/stage2/uy54gh.png",
-    answer: "uy54gh",
+    image: "/pictures/stage2/akgpsl.png",
+    answer: "akgpsl",
     isVideo: false,
     isPDF: false,
     description: "STAGE 2 CLUE #3: Analyze this semi-final intel file and enter the secret code."
