@@ -1,16 +1,16 @@
 import React from "react";
-import { CheckCircle, ShieldAlert, Pause, Play, Unlock } from "lucide-react";
-import { TOTAL_CLUES_COUNT } from "../clues";
+import { CheckCircle, ShieldAlert, Pause, Play, Unlock, FileText, Eye } from "lucide-react";
+import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
 import { TEAMS_CONFIG } from "../teamsConfig";
 
-export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, onResolveHelpTeam }) {
+export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, onResolveHelpTeam, onPreviewClue }) {
   return (
     <div style={{ width: "100%", overflowX: "auto" }}>
       <table className="heist-table">
         <thead>
           <tr>
             <th>TEAM CODE</th>
-            <th>CURRENT STAGE &amp; CLUE</th>
+            <th>ATTENDING CLUE &amp; INTEL</th>
             <th>TOTAL PROGRESS</th>
             <th>ATTEMPTS LEFT</th>
             <th>STATUS</th>
@@ -19,46 +19,101 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, on
         </thead>
         <tbody>
           {TEAMS_CONFIG.map((t) => {
-            const data = (teams && (teams[t.id] || teams[t.name])) || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [], needsHelp: false };
+            const data = (teams && (teams[t.id] || teams[t.name])) || { score: 0, attempts: 0, locked: false, isPaused: false, solvedClues: [], needsHelp: false, currentClueId: null };
             const solvedCount = data.solvedClues ? data.solvedClues.length : (data.score || 0);
             const remainingAttempts = 3 - (data.attempts || 0);
             const isDanger = remainingAttempts === 1 && !data.locked;
 
-            // Determine stage and clue number
-            let stageText = "Stage 1 (Initial Hunt)";
-            let clueText = `Clue ${Math.min(solvedCount + 1, 8)}/8`;
+            // Find active clue currently assigned to this team
+            const activeClue = CLUES.find(c => c.id === data.currentClueId);
+
+            // Determine stage text and color
+            let stageText = "Stage 1";
             let stageColor = "#C8102E";
 
-            if (solvedCount >= 8 && solvedCount < 10) {
+            if (activeClue) {
+              if (activeClue.stage === 2) {
+                stageText = "Stage 2 (Semi-Final)";
+                stageColor = "#d97706";
+              } else if (activeClue.stage === 3) {
+                stageText = "Final Stage (Grand Vault)";
+                stageColor = "#a855f7";
+              }
+            } else if (solvedCount >= 8 && solvedCount < 11) {
               stageText = "Stage 2 (Semi-Final)";
-              clueText = `Clue ${solvedCount - 7}/2`;
               stageColor = "#d97706";
-            } else if (solvedCount === 10) {
-              stageText = "Final Stage (Grand Vault)";
-              clueText = `Clue 1/1`;
-              stageColor = "#a855f7";
             } else if (solvedCount >= 11) {
-              stageText = "Finished";
-              clueText = "All 11 Clues Solved";
-              stageColor = "#22c55e";
+              stageText = "Final Stage";
+              stageColor = "#a855f7";
             }
 
             return (
               <tr key={t.id}>
+                {/* TEAM NAME */}
                 <td style={{ fontWeight: 700, letterSpacing: 1, fontFamily: "var(--font-stencil)", fontSize: 15 }}>
                   {t.name}
                 </td>
 
-                {/* CURRENT STAGE & CLUE */}
+                {/* CURRENTLY ATTENDING CLUE & INTEL */}
                 <td>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                    <span style={{ color: stageColor, fontSize: 12, fontWeight: 700 }}>
-                      {stageText}
-                    </span>
-                    <span style={{ color: "var(--text-muted)", fontSize: 11, fontFamily: "var(--font-mono)" }}>
-                      {clueText}
-                    </span>
-                  </div>
+                  {solvedCount >= TOTAL_CLUES_COUNT ? (
+                    <div style={{ color: "#22c55e", fontWeight: 700, fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                      <CheckCircle size={14} color="#22c55e" />
+                      <span>HEIST COMPLETED (ALL CLUES SOLVED)</span>
+                    </div>
+                  ) : activeClue ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 260 }}>
+                      {/* Media Thumbnail */}
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 6,
+                          overflow: "hidden",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          background: "#000",
+                          flexShrink: 0,
+                          cursor: "pointer",
+                          position: "relative"
+                        }}
+                        onClick={() => onPreviewClue && onPreviewClue(activeClue)}
+                        title="Click to preview active clue"
+                      >
+                        {activeClue.isPDF || activeClue.image.endsWith(".pdf") ? (
+                          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(200, 16, 46, 0.25)" }}>
+                            <FileText size={20} color="#C8102E" />
+                          </div>
+                        ) : activeClue.image.endsWith(".mp4") ? (
+                          <video src={activeClue.image} style={{ width: "100%", height: "100%", objectFit: "cover" }} muted />
+                        ) : (
+                          <img src={activeClue.image} alt={activeClue.id} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        )}
+                        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.2)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0, transition: "opacity 0.2s" }} className="thumb-hover">
+                          <Eye size={14} color="#fff" />
+                        </div>
+                      </div>
+
+                      {/* Clue Details */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ color: stageColor, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                            {stageText}
+                          </span>
+                          <span style={{ background: "rgba(200,16,46,0.2)", border: "1px solid rgba(200,16,46,0.4)", color: "#fff", fontSize: 10, padding: "1px 6px", borderRadius: 3, fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                            {activeClue.id}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#22c55e", fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+                          KEY: <span style={{ color: "#fff", background: "rgba(255,255,255,0.06)", padding: "1px 5px", borderRadius: 3 }}>{activeClue.answer}</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                          FILE: {activeClue.image.split("/").pop()}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ color: "var(--text-muted)", fontSize: 11, fontStyle: "italic" }}>Awaiting clue assignment...</span>
+                  )}
                 </td>
 
                 {/* TOTAL PROGRESS */}

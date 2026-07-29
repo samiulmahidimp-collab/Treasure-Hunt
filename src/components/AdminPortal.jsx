@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { dbService } from "../firebase";
-import { Lock, Play, Pause, RefreshCw, LogOut, Trophy, Layers, Edit, Check, X } from "lucide-react";
+import { Lock, Play, Pause, RefreshCw, LogOut, Trophy, Layers, Edit, Check, X, FileText, Download } from "lucide-react";
 import Leaderboard from "./Leaderboard";
 import HeistLayout from "./HeistLayout";
 import { DeTag } from "./HeistUI";
@@ -19,6 +19,7 @@ export default function AdminPortal({ onBack }) {
   const [cluesList, setCluesList] = useState([...CLUES]);
   const [editingClueId, setEditingClueId] = useState(null);
   const [editFormData, setEditFormData] = useState({ answer: "", image: "", description: "", stage: 1 });
+  const [previewClue, setPreviewClue] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -305,7 +306,7 @@ export default function AdminPortal({ onBack }) {
                 <h2 className="heist-section-title" style={{ fontSize: 18, letterSpacing: 1.5 }}>REAL-TIME TEAM TRACKER</h2>
               </div>
               <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "var(--font-mono)", letterSpacing: 1 }}>
-                2 STAGES • {TOTAL_CLUES_COUNT} CLUES TOTAL
+                {TOTAL_CLUES_COUNT} CLUES TOTAL
               </span>
             </div>
 
@@ -314,6 +315,7 @@ export default function AdminPortal({ onBack }) {
               onTogglePauseTeam={handleTogglePauseTeam}
               onUnlockTeam={handleUnlockTeam}
               onResolveHelpTeam={handleResolveHelpTeam}
+              onPreviewClue={(clue) => setPreviewClue(clue)}
             />
           </section>
         ) : (
@@ -459,6 +461,42 @@ export default function AdminPortal({ onBack }) {
               })}
             </div>
           </section>
+        )}
+
+        {/* Admin Clue Lightbox Preview Modal */}
+        {previewClue && (
+          <div className="zoom-modal" onClick={() => setPreviewClue(null)}>
+            <div className="zoom-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520, width: "90%", padding: 24, textAlign: "center" }}>
+              <button className="zoom-close" onClick={() => setPreviewClue(null)}><X size={24} /></button>
+              <div style={{ display: "inline-block", background: "#C8102E", color: "#fff", fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 4, marginBottom: 12, letterSpacing: 1 }}>
+                ACTIVE CLUE PREVIEW ({previewClue.id})
+              </div>
+              
+              {previewClue.isPDF || previewClue.image.endsWith(".pdf") ? (
+                <div style={{ padding: 24, background: "rgba(200, 16, 46, 0.15)", border: "1px dashed #C8102E", borderRadius: 8, margin: "16px 0" }}>
+                  <FileText size={56} color="#C8102E" style={{ marginBottom: 12 }} />
+                  <h4 style={{ color: "#fff", fontSize: 16, margin: "0 0 8px" }}>FINAL VAULT PDF CLUE DOCUMENT</h4>
+                  <p style={{ color: "var(--text-secondary)", fontSize: 12, marginBottom: 16 }}>File: {previewClue.image}</p>
+                  <a href={previewClue.image} download="FInal-Clue.pdf" target="_blank" rel="noopener noreferrer" className="heist-btn-solid" style={{ textDecoration: "none", padding: "10px 20px" }}>
+                    <Download size={16} /> DOWNLOAD PDF FILE
+                  </a>
+                </div>
+              ) : previewClue.image.endsWith(".mp4") ? (
+                <video src={previewClue.image} controls autoPlay loop playsInline style={{ width: "100%", maxHeight: "60vh", borderRadius: 8, margin: "12px 0", display: "block" }} />
+              ) : (
+                <img src={previewClue.image} alt={previewClue.id} className="zoom-img" style={{ maxHeight: "60vh", objectFit: "contain", margin: "12px 0" }} />
+              )}
+
+              <div style={{ textAlign: "left", background: "rgba(10,10,15,0.8)", padding: 16, borderRadius: 6, border: "1px solid var(--border-dim)", marginTop: 12 }}>
+                <div style={{ fontSize: 13, color: "#22c55e", fontWeight: 700, fontFamily: "var(--font-mono)", marginBottom: 6 }}>
+                  DECRYPTION KEY: <span style={{ color: "#fff" }}>{previewClue.answer}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                  {previewClue.description}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
       </div>
