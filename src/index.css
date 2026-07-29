@@ -1010,23 +1010,27 @@ html.chat-active, body.chat-active {
   }
 
   .clue-body {
-    gap: 8px !important;
+    gap: 12px !important;
     flex-wrap: nowrap !important;
     align-items: center !important;
   }
 
   .clue-img-wrap {
-    flex: 0 0 46px !important;
-    width: 46px !important;
-    max-width: 46px !important;
-    height: 46px !important;
-    min-height: 46px !important;
+    flex: 0 0 105px !important;
+    width: 105px !important;
+    max-width: 105px !important;
+    height: 95px !important;
+    min-height: 95px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.6) !important;
   }
 
-  .clue-img-wrap img {
+  .clue-img-wrap img,
+  .clue-img-wrap video {
     height: 100% !important;
     width: 100% !important;
-    object-fit: cover !important;
+    object-fit: contain !important;
+    background: #000 !important;
   }
 
   .clue-info {

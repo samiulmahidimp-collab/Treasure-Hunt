@@ -1,16 +1,16 @@
 // Configuration mapping clue images and videos to stage, id, answer, and description
-// Stage 1: 40 clues (/pictures/stage1/)
+// Stage 1: 42 clues (/pictures/stage1/)
 // Stage 2: 2 clues (/pictures/stage2/)
 // Final Stage: 1 clue (/pictures/final/)
 
 export const STAGE_1_RAW_FILES = [
-  "afrewa.png", "kiytth.png", "qplwet.png", "abklcd.jpg", "ahfiuw.jpg", "apndaq.jpg",
+  "afrewa.png", "kiytth.png", "qplwet.jpg", "abklcd.jpg", "ahfiuw.jpg", "apndaq.jpg",
   "jk1106.png", "kshpfl.png", "afdhus.png", "dfghjk.png", "efigpn.png", "fhwhgh.png",
   "fkhjol.png", "fwepkl.png", "ghajof.png", "hjpnet.png", "jhkdklt.mp4", "jnoipk.png",
-  "ljknpm.png", "mjghsl.png", "mjkhol.png", "najfep.png", "oksghj.png", "pklshu.png",
-  "psigko.png", "pskggh.png", "qrwhwk.png", "quwysa.png", "rbafla.png", "rskter.png",
-  "sghijk.png", "shfhwo.png", "sihijk.png", "skgbks.png", "smkgho.mp4", "soigsl.png",
-  "tkrunp.png", "uiolfh.png", "uteuok.png", "yoovsk.png"
+  "ljknpm.png", "mjghsl.png", "mjkhol.png", "najfep.png", "oksghj.png", "opklru.jpg",
+  "pklshu.png", "psigko.png", "pskggh.png", "qrwhwk.png", "quwysa.png", "rbafla.png",
+  "romhkf.jpg", "rskter.png", "shfhwo.png", "sihijk.png", "skgbks.png", "smkgho.mp4",
+  "soigsl.png", "tkrunp.png", "uiolfh.png", "uteuok.png", "yen7rc.jpg", "yoovsk.png"
 ];
 
 export const STAGE_1_CLUES_COUNT = 8; // Number of Stage 1 clues each team must solve to advance
@@ -39,7 +39,7 @@ export const STAGE_2_CLUES = [
     id: "clue_s2_1",
     stage: 2,
     stageName: "Stage 2 (Semi-Final)",
-    image: "/pictures/stage2/opklru.jpg",
+    image: "/pictures/stage2/755404929_1667512288708076_8097096763242322945_n.webp",
     answer: "opklru",
     description: "CLUE (Stage 2): Analyze this image and enter the secret code."
   },
@@ -47,7 +47,7 @@ export const STAGE_2_CLUES = [
     id: "clue_s2_2",
     stage: 2,
     stageName: "Stage 2 (Semi-Final)",
-    image: "/pictures/stage2/romhkf.jpg",
+    image: "/pictures/stage1/romhkf.jpg",
     answer: "romhkf",
     description: "CLUE (Stage 2): Analyze this image and enter the secret code."
   }
@@ -58,7 +58,7 @@ export const FINAL_STAGE_CLUES = [
     id: "clue_final_1",
     stage: 3,
     stageName: "Final Stage (Grand Vault)",
-    image: "/pictures/final/yen7rc.jpg",
+    image: "/pictures/final/753738444_1063661062766904_4513352876331624742_n.webp",
     answer: "yen7rc",
     description: "CLUE (Final): Analyze this image and enter the secret code."
   }
