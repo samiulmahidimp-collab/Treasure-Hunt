@@ -259,20 +259,27 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
     if (isLocked || isAllComplete || safeTeamData.currentClueId) return;
 
     const autoAssign = async () => {
-      const solvedSet = new Set(safeTeamData.solvedClues || []);
-      const stage1Unsolved = CLUES.filter(c => (c.stage || 1) === 1 && !solvedSet.has(c.id));
-      const anyUnsolved = CLUES.filter(c => !solvedSet.has(c.id));
-      const pool = stage1Unsolved.length > 0 ? stage1Unsolved : anyUnsolved;
-      
-      let hash = 0;
-      for (let i = 0; i < (effectiveTeamId || "").length; i++) {
-        hash += effectiveTeamId.charCodeAt(i);
-      }
-      const teamClueIndex = pool.length > 0 ? Math.abs(hash) % pool.length : 0;
-      const defaultTarget = pool[teamClueIndex] || pool[0] || CLUES[0];
+      const solvedList = safeTeamData.solvedClues || [];
+      const count = solvedList.length;
+      let targetClue = null;
 
-      if (defaultTarget) {
-        await dbService.updateTeam(effectiveTeamId, { currentClueId: defaultTarget.id, attempts: 0, locked: false });
+      if (count >= 11) {
+        targetClue = FINAL_STAGE_CLUES[0];
+      } else if (count >= 8) {
+        targetClue = STAGE_2_CLUES[count - 8] || STAGE_2_CLUES[0];
+      } else {
+        const solvedSet = new Set(solvedList);
+        const stage1Unsolved = STAGE_1_CLUES.filter(c => !solvedSet.has(c.id));
+        let hash = 0;
+        for (let i = 0; i < (effectiveTeamId || "").length; i++) {
+          hash += effectiveTeamId.charCodeAt(i);
+        }
+        const teamClueIndex = stage1Unsolved.length > 0 ? Math.abs(hash) % stage1Unsolved.length : 0;
+        targetClue = stage1Unsolved[teamClueIndex] || STAGE_1_CLUES[0];
+      }
+
+      if (targetClue) {
+        await dbService.updateTeam(effectiveTeamId, { currentClueId: targetClue.id, attempts: 0, locked: false });
       }
     };
     autoAssign();
@@ -707,10 +714,10 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
                         <>
                           <div
                             className="clue-img-wrap"
-                            onClick={() => setZoomImage({ src: activeClue.image, filename: activeClue.answer })}
+                            onClick={() => setZoomImage({ src: activeClue.image, filename: activeClue.answer, isVideo: activeClue.isVideo })}
                             title="Click to Zoom & Download"
                           >
-                            {activeClue.image.endsWith(".mp4") ? (
+                            {activeClue.isVideo || activeClue.image.toLowerCase().endsWith(".mp4") ? (
                               <video
                                 src={activeClue.image}
                                 controls
@@ -797,14 +804,23 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
                         {showClueMedia && (
                           <div
                             style={{ marginTop: 8, maxWidth: 180, border: "1px solid var(--border-dim)", overflow: "hidden", cursor: "pointer", position: "relative" }}
-                            onClick={() => setZoomImage({ src: msg.clue.image, filename: msg.clue.answer })}
+                            onClick={() => setZoomImage({ src: msg.clue.image, filename: msg.clue.answer, isVideo: msg.clue.isVideo || msg.clue.image.toLowerCase().endsWith(".mp4") })}
                           >
-                            <img
-                              src={msg.clue.image}
-                              alt="Clue visual"
-                              style={{ width: "100%", height: "auto", display: "block" }}
-                              onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/300x200/0D0D0D/C8102E?text=IMAGE+NOT+FOUND"; }}
-                            />
+                            {msg.clue.isVideo || msg.clue.image.toLowerCase().endsWith(".mp4") ? (
+                              <video
+                                src={msg.clue.image}
+                                style={{ width: "100%", height: "auto", display: "block" }}
+                                muted
+                                playsInline
+                              />
+                            ) : (
+                              <img
+                                src={msg.clue.image}
+                                alt="Clue visual"
+                                style={{ width: "100%", height: "auto", display: "block" }}
+                                onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/300x200/0D0D0D/C8102E?text=IMAGE+NOT+FOUND"; }}
+                              />
+                            )}
                             <div className="clue-zoom-icon" style={{ padding: 4 }}><ZoomIn size={11} color="#fff" /></div>
                           </div>
                         )}
@@ -872,7 +888,7 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
           <div className="zoom-modal" onClick={() => setZoomImage(null)}>
             <div className="zoom-content" onClick={(e) => e.stopPropagation()}>
               <button className="zoom-close" onClick={() => setZoomImage(null)}><X size={24} /></button>
-              {zoomImage.src.endsWith(".mp4") ? (
+              {zoomImage.isVideo || zoomImage.src.toLowerCase().endsWith(".mp4") ? (
                 <video
                   src={zoomImage.src}
                   controls

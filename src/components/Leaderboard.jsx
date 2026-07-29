@@ -133,11 +133,11 @@ export default function Leaderboard({ teams, onTogglePauseTeam, onUnlockTeam, on
                         onClick={() => onPreviewClue && onPreviewClue(activeClue)}
                         title="Click to preview active clue"
                       >
-                        {activeClue.isPDF || activeClue.image.endsWith(".pdf") ? (
+                        {activeClue.isPDF || activeClue.image.toLowerCase().endsWith(".pdf") ? (
                           <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(200, 16, 46, 0.25)" }}>
                             <FileText size={20} color="#C8102E" />
                           </div>
-                        ) : activeClue.image.endsWith(".mp4") ? (
+                        ) : activeClue.isVideo || activeClue.image.toLowerCase().endsWith(".mp4") ? (
                           <video src={activeClue.image} style={{ width: "100%", height: "100%", objectFit: "cover" }} muted />
                         ) : (
                           <img src={activeClue.image} alt={activeClue.id} style={{ width: "100%", height: "100%", objectFit: "cover" }} />

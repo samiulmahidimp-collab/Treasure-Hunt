@@ -473,7 +473,7 @@ export default function AdminPortal({ onBack }) {
                 ACTIVE CLUE PREVIEW ({previewClue.id})
               </div>
               
-              {previewClue.isPDF || previewClue.image.endsWith(".pdf") ? (
+              {previewClue.isPDF || previewClue.image.toLowerCase().endsWith(".pdf") ? (
                 <div style={{ padding: 24, background: "rgba(200, 16, 46, 0.15)", border: "1px dashed #C8102E", borderRadius: 8, margin: "16px 0" }}>
                   <FileText size={56} color="#C8102E" style={{ marginBottom: 12 }} />
                   <h4 style={{ color: "#fff", fontSize: 16, margin: "0 0 8px" }}>FINAL VAULT PDF CLUE DOCUMENT</h4>
@@ -482,7 +482,7 @@ export default function AdminPortal({ onBack }) {
                     <Download size={16} /> DOWNLOAD PDF FILE
                   </a>
                 </div>
-              ) : previewClue.image.endsWith(".mp4") ? (
+              ) : previewClue.isVideo || previewClue.image.toLowerCase().endsWith(".mp4") ? (
                 <video src={previewClue.image} controls autoPlay loop playsInline style={{ width: "100%", maxHeight: "60vh", borderRadius: 8, margin: "12px 0", display: "block" }} />
               ) : (
                 <img src={previewClue.image} alt={previewClue.id} className="zoom-img" style={{ maxHeight: "60vh", objectFit: "contain", margin: "12px 0" }} />
