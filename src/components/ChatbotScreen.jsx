@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { dbService } from "../firebase";
 import { CLUES, TOTAL_CLUES_COUNT } from "../clues";
-import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play, Clock, Trophy, Award } from "lucide-react";
+import { Send, LogOut, Check, HelpCircle, ZoomIn, Download, X, Camera, AlertTriangle, ChevronUp, ChevronDown, Play, Clock, Trophy, Award, FileText } from "lucide-react";
 import SystemLocked from "./SystemLocked";
 import HeistLayout from "./HeistLayout";
 import QRScannerModal from "./QRScannerModal";
@@ -367,7 +367,9 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
       return;
     }
 
-    const isCorrect = userText.toLowerCase() === clueToCheck.answer.toLowerCase();
+    const userClean = userText.trim().toLowerCase();
+    const isCorrect = userClean === clueToCheck.answer.toLowerCase() ||
+      (clueToCheck.altAnswers && clueToCheck.altAnswers.map(a => a.toLowerCase()).includes(userClean));
 
     if (isCorrect) {
       setShowSuccessIndicator(true);
@@ -644,37 +646,61 @@ export default function ChatbotScreen({ teamName, teamId, teamData, isGameStarte
 
                   {!isClueCollapsed && (
                     <div className="clue-body">
-                      <div
-                        className="clue-img-wrap"
-                        onClick={() => setZoomImage({ src: activeClue.image, filename: activeClue.answer })}
-                        title="Click to Zoom & Download"
-                      >
-                        {activeClue.image.endsWith(".mp4") ? (
-                          <video
-                            src={activeClue.image}
-                            controls
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            style={{ width: "100%", maxHeight: 220, borderRadius: 4, display: "block" }}
-                          />
-                        ) : (
-                          <img
-                            src={activeClue.image}
-                            alt="Active Clue Visual"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "https://placehold.co/600x400/0D0D0D/C8102E?text=PICTURE+NOT+LOADED";
-                            }}
-                          />
-                        )}
-                        <div className="clue-zoom-icon"><ZoomIn size={14} color="#fff" /></div>
-                      </div>
-                      <div className="clue-info">
-                        <p className="clue-desc">{activeClue.description}</p>
-                        <p className="clue-hint">Tip: Tap image or video to view full view. Enter answer or scan QR code below.</p>
-                      </div>
+                      {activeClue.isPDF || activeClue.image.endsWith(".pdf") ? (
+                        <div style={{ padding: "16px 12px", textAlign: "center", background: "rgba(200, 16, 46, 0.12)", border: "1px dashed #C8102E", borderRadius: 6, width: "100%" }}>
+                          <FileText size={44} color="#C8102E" style={{ marginBottom: 8 }} />
+                          <h4 style={{ color: "#fff", fontSize: 14, margin: "0 0 6px", fontFamily: "var(--font-display)", letterSpacing: 1 }}>
+                            ENCRYPTED PDF INTEL DOCUMENT
+                          </h4>
+                          <p style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 14, lineHeight: 1.5 }}>
+                            Download and inspect the PDF document below to retrieve the final heist decryption key!
+                          </p>
+                          <a
+                            href={activeClue.image}
+                            download="FInal-Clue.pdf"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="heist-btn-solid"
+                            style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", fontSize: 12, background: "#C8102E", borderColor: "#C8102E", color: "#fff", textDecoration: "none", fontWeight: 700, borderRadius: 4 }}
+                          >
+                            <Download size={15} /> DOWNLOAD FINAL CLUE PDF
+                          </a>
+                        </div>
+                      ) : (
+                        <>
+                          <div
+                            className="clue-img-wrap"
+                            onClick={() => setZoomImage({ src: activeClue.image, filename: activeClue.answer })}
+                            title="Click to Zoom & Download"
+                          >
+                            {activeClue.image.endsWith(".mp4") ? (
+                              <video
+                                src={activeClue.image}
+                                controls
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                style={{ width: "100%", maxHeight: 220, borderRadius: 4, display: "block" }}
+                              />
+                            ) : (
+                              <img
+                                src={activeClue.image}
+                                alt="Active Clue Visual"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = "https://placehold.co/600x400/0D0D0D/C8102E?text=PICTURE+NOT+LOADED";
+                                }}
+                              />
+                            )}
+                            <div className="clue-zoom-icon"><ZoomIn size={14} color="#fff" /></div>
+                          </div>
+                          <div className="clue-info">
+                            <p className="clue-desc">{activeClue.description}</p>
+                            <p className="clue-hint">Tip: Tap image or video to view full view. Enter answer or scan QR code below.</p>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

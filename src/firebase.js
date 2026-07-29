@@ -16,8 +16,8 @@ export const generateDefaultTeams = () => {
   const stage1Ids = STAGE_1_CLUES.map(c => c.id);
 
   TEAMS_CONFIG.forEach((t, idx) => {
-    // Spread team assignments across all Stage 1 clues with maximum separation
-    const assignedIndex = (idx * 2) % stage1Ids.length;
+    // Spread team assignments across all 58 Stage 1 clues with maximum separation (spacing by 4)
+    const assignedIndex = (idx * 4) % stage1Ids.length;
     teams[t.id] = {
       id: t.id,
       name: t.name,
