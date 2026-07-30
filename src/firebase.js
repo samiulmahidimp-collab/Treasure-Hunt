@@ -210,9 +210,7 @@ export const dbService = {
           if (snapshot.exists()) {
             callback(snapshot.data());
           } else {
-            const initialTeams = generateDefaultTeams();
-            setDoc(teamsRef, initialTeams);
-            callback(initialTeams);
+            console.warn("Firestore teams_list document does not exist! Please reset from Admin panel.");
           }
         }, (error) => {
           console.error("Firestore teams subscription error:", error);
@@ -258,15 +256,10 @@ export const dbService = {
           if (allTeams[teamName]) {
             callback(allTeams[teamName]);
           } else {
-            const defaultTeams = generateDefaultTeams();
-            const defaultTeam = defaultTeams[teamName] || { score: 0, solvedClues: [], sessionToken: "", attempts: 0, locked: false, isPaused: false };
-            updateDoc(docRef, { [teamName]: defaultTeam });
-            callback(defaultTeam);
+            console.warn(`Team ${teamName} not found in Firestore teams_list.`);
           }
         } else {
-          const initialTeams = generateDefaultTeams();
-          setDoc(docRef, initialTeams);
-          callback(initialTeams[teamName]);
+          console.warn("teams_list document does not exist in Firestore.");
         }
       }, (error) => {
         console.error("Firestore team subscription error:", error);
