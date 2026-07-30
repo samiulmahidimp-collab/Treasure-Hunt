@@ -306,15 +306,24 @@ export const dbService = {
   updateTeam: async (teamName, teamData) => {
     if (!useMock) {
       const docRef = doc(db, "game_settings", "teams_list");
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const currentData = snap.data();
-        const updatedTeam = { ...currentData[teamName], ...teamData };
-        await updateDoc(docRef, { [teamName]: updatedTeam });
-      } else {
-        const initialTeams = generateDefaultTeams();
-        initialTeams[teamName] = { ...initialTeams[teamName], ...teamData };
-        await setDoc(docRef, initialTeams);
+      const updatePayload = {};
+      Object.entries(teamData).forEach(([key, val]) => {
+        updatePayload[`${teamName}.${key}`] = val;
+      });
+
+      try {
+        await updateDoc(docRef, updatePayload);
+      } catch (error) {
+        // If document doesn't exist, create it with all default teams first
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) {
+          const initialTeams = generateDefaultTeams();
+          initialTeams[teamName] = { ...initialTeams[teamName], ...teamData };
+          await setDoc(docRef, initialTeams);
+        } else {
+          // If it exists, retry updating
+          await updateDoc(docRef, updatePayload);
+        }
       }
     } else if (hasDetectedNoAPI) {
       updateLocalStorageDB((state) => {

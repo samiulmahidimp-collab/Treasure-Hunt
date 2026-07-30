@@ -1,0 +1,135 @@
+{
+  "gameSettings": {
+    "isStarted": true,
+    "isPaused": false
+  },
+  "teams": {
+    "khuje_berai": {
+      "id": "khuje_berai",
+      "name": "খুঁজে বেড়াই",
+      "password": "chemri",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "team_damn": {
+      "id": "team_damn",
+      "name": "Team Damn",
+      "password": "bolod",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "los_reyes": {
+      "id": "los_reyes",
+      "name": "Los Reyes",
+      "password": "goru",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "the_explorers": {
+      "id": "the_explorers",
+      "name": "The explorers",
+      "password": "chagol",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "pirates_of_ipe": {
+      "id": "pirates_of_ipe",
+      "name": "The Pirates of IPE",
+      "password": "nabisco",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "treasure_titans": {
+      "id": "treasure_titans",
+      "name": "Treasure Titans",
+      "password": "dishwash",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "chockers_squad": {
+      "id": "chockers_squad",
+      "name": "CHOCKERS’ SQUAD",
+      "password": "vera",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "team_nexus": {
+      "id": "team_nexus",
+      "name": "Team nexus",
+      "password": "Gandu",
+      "score": 0,
+      "solvedClues": [],
+      "currentClueId": null,
+      "chatMessages": [],
+      "sessionToken": "",
+      "attempts": 0,
+      "locked": false,
+      "isPaused": false
+    },
+    "synergy": {
+      "sessionToken": "1btiuvl1rmpms6iww80",
+      "currentClueId": "clue_s1_32",
+      "attempts": 0,
+      "locked": false,
+      "chatMessages": [
+        {
+          "sender": "professor",
+          "text": "Bella ciao, team SYNERGY. I am The Professor. The plan is set, the police are outside, and the vault is waiting.",
+          "type": "welcome",
+          "showStartButton": false
+        },
+        {
+          "sender": "player",
+          "text": "WE ARE READY! INITIATE THE HEIST MISSION."
+        },
+        {
+          "sender": "professor",
+          "text": "THE HEIST HAS BEGUN! Analyze the active visual clue above and enter the decryption key to proceed.",
+          "type": "success"
+        }
+      ]
+    }
+  }
+}
