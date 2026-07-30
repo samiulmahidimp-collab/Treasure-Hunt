@@ -31,11 +31,6 @@ export const TEAMS_CONFIG = [
     password: "dishwash"
   },
   {
-    id: "chockers_squad",
-    name: "CHOCKERS’ SQUAD",
-    password: "vera"
-  },
-  {
     id: "team_nexus",
     name: "Team nexus",
     password: "Gandu"
@@ -54,11 +49,6 @@ export const TEAMS_CONFIG = [
     id: "team_lannisters",
     name: "Team Lannisters",
     password: "harbojjat"
-  },
-  {
-    id: "mayer_doya_team",
-    name: "মায়ের দোয়া টিম",
-    password: "nosto"
   },
   {
     id: "synergy",
